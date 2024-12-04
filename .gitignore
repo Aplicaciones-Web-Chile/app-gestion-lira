@@ -5,7 +5,7 @@
 
 # Testing
 /coverage
-
+/backend/borrar
 # Producción
 /dist
 /build
