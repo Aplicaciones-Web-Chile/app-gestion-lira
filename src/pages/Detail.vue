@@ -146,7 +146,7 @@ export default {
       this.loading = true;
       try {
         const payload = {
-          peticion: ["detalles"],
+          peticion: "detalles",
           Distribuidor: "001",
           selectedPeriod: selectedDate,
           tipo: id
