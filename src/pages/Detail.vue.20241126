@@ -1,0 +1,153 @@
+<template>
+  <q-page class="q-pa-md">
+    <q-card>
+      <q-card-section>
+        <!-- Botón de Volver -->
+        <q-btn
+          label=""
+          color="primary"
+          icon="arrow_back"
+          @click="volverAtras"
+        />
+      </q-card-section>
+
+
+      <!-- Mostrar los datos detallados -->
+      <q-table
+        :title="title"
+        :rows="detalles"
+        :columns="columns"
+        row-key="index"
+        />
+
+      <!-- Botón para descargar los datos en CSV -->
+      <q-card-actions align="right">
+        <q-btn
+          label="Descargar CSV"
+          color="primary"
+          :disable="!detalles.length"
+          @click="downloadCSV"
+        />
+      </q-card-actions>
+    </q-card>
+  </q-page>
+</template>
+
+<script>
+import Vue from "vue";
+import Const from "../assets/const.js";
+
+export default {
+  data() {
+    return {
+      id: null,
+      title: null,
+      date: null,
+      columns: [
+        { name: "rut", label: "RUT", align: "left", field: "rut" },
+        { name: "sucursal", label: "Sucursal", align: "left", field: "sucursal" },
+        {
+          name: "nombreRazonSocial",
+          label: "Nombre Razón Social",
+          align: "left",
+          field: "nombreRazonSocial",
+        },
+        { name: "saldo", label: "Saldo", align: "right", field: "saldo" },
+        {
+          name: "creditoDisponible",
+          label: "Crédito Disponible",
+          align: "right",
+          field: "creditoDisponible",
+        },
+      ],
+      detalles: [],
+    };
+  },
+  mounted() {
+    // Cargar datos detallados al montar el componente
+    if (this.$store.state.cards.id === null) {
+      this.$router.push("/Dashboard");
+    }
+    // Obtener los valores del Store
+    this.id = this.$store.state.cards.id;
+    this.date = this.$store.state.cards.date;
+
+    if (this.id === 'cuentas_por_pagar') {
+      this.title = 'Detalle de cuentas por pagar';
+    }
+    else if (this.id === 'cuentas_por_cobrar') {
+      this.title = 'Detalle de cuentas por cobrar';
+    }
+
+    // this.cargarDetalles();
+  },
+  methods: {
+    volverAtras() {
+      this.$router.push("/Dashboard");
+    },
+    async cargarDetalles() {
+      await this.cargarDetallesDesdeJSON(); // Intentar cargar desde el JSON local
+    },
+    async cargarDetallesDesdeJSON() {
+      try {
+        const response = await this.$axios.get("/saldo_output_fixed.json");
+        console.log("Datos del JSON cargados:", response.data.data);
+
+        if (response.data && Array.isArray(response.data.data)) {
+          this.detalles.splice(0, this.detalles.length, ...response.data.data.map((item, index) => ({
+            index, // Índice único para cada fila
+            rut: item.RUT,
+            sucursal: item.Sucursal,
+            nombreRazonSocial: item.Nombre_Razon_Social,
+            saldo: item.Saldo,
+            creditoDisponible: item.Credito_Disponible,
+          })));
+          this.detalles = [...this.detalles];
+
+          console.log("Detalles después de mapear:", this.detalles);
+        } else {
+          console.error("El JSON local no contiene datos válidos.");
+        }
+      } catch (error) {
+        console.error("Error al cargar los datos desde el JSON local:", error);
+      }
+    },
+    convertToCSV(data) {
+      // Crear encabezados
+      const headers = this.columns.map((col) => col.label).join(",");
+      // Crear filas
+      const rows = data.map((row) =>
+        this.columns
+          .map((col) => `"${row[col.field] || ""}"`) // Asegurar valores entre comillas
+          .join(",")
+      );
+      // Unir encabezados y filas
+      return [headers, ...rows].join("\n");
+    },
+    downloadCSV() {
+      if (!this.detalles.length) {
+        console.warn("No hay datos disponibles para descargar.");
+        return;
+      }
+
+      // Convertir los datos a CSV
+      const csvContent = this.convertToCSV(this.detalles);
+
+      // Crear un archivo Blob para el CSV
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+
+      // Crear un enlace de descarga
+      const link = document.createElement("a");
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `detalles_${this.id}.csv`);
+      link.style.visibility = "hidden";
+
+      // Descargar el archivo
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    },
+  },
+};
+</script>

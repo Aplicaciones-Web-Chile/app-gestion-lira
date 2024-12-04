@@ -1,0 +1,100 @@
+<?php
+header('Access-Control-Allow-Origin: *');
+
+	require_once __DIR__.'/common.php';
+	require_once __DIR__.'/commonDB.php';
+
+	$arrayReturn	=	array();
+	$flag			=	true;
+
+
+
+
+    file_put_contents('addHijo.php.json',json_encode( $_POST ) );
+	$_REQUEST = (isset($_POST) && is_array($_POST)) ? $_POST : $_GET;
+
+	//primero validamos que se pueda crear el directorio para almacenar imagenes
+	$target_dir = __DIR__.'/adjuntos/'.$_POST[ 'rut' ];
+	if( !is_dir($target_dir) && !mkdir( $target_dir ,0777,true ) ){
+		//exit('ERROR: No se puede crear directorio para imagenes !');
+		$arrayReturn['id'] = -1;
+		$arrayReturn['message'] = 'ERROR: No se puede crear el directorio para imagenes (problemas de permiso de escritura)';
+		$flag = false;
+	}
+
+
+	if( $flag === true ){
+
+		//limpiamos el directorio y almacenamos las nuevas imagenes
+		array_map( 'unlink', glob( $target_dir.'/*'));
+		foreach( $_POST['userImages'] as $base64 ){
+			$ext = explode('/', explode(';', $base64 )[0] )[1];
+			$decoded_file = base64_decode( explode(',', explode(';', $base64 )[1] )[1] );
+			if( file_put_contents( $target_dir.'/'.$_POST['rut'].'.'.$ext , $decoded_file) == 0 ){
+				$arrayReturn['id'] = -1;
+				$arrayReturn['message'] = 'ERROR: Guardando imagen';
+				$flag = false;
+			}
+		}
+
+		if( $flag === true ){
+
+			$res = $db->getAll("select rut from hijo where rut='".$_REQUEST['rut']."'");
+			// $id_apoderado = $db->get("select id from apoderado where correo=?",$_POST['correo']);
+			if( count($res) ){
+				
+				$arrayReturn['id'] = -1;
+				$arrayReturn['message'] = 'El RUT ingresado ya fue asignado';
+				$flag = false;
+			} else {
+
+				
+				/*
+					rut	varchar(20)	
+					nombre	varchar(100)	
+					apellidos	varchar(100)	
+					fecha_nacimiento	date	
+					sexo	varchar(20)	
+					peso	varchar(20) NULL	
+					altura	varchar(20) NULL	
+					alergias	text NULL	
+					apoderado_id	bigint(20)
+				*/
+
+				/* Hack mientras desde la APP se envia el apoderado_id */
+				/*if(empty($_REQUEST['apoderado_id'])){
+					$_REQUEST['apoderado_id'] = 21;
+				}*/
+
+				$sqlInsert = "INSERT INTO `hijo` (`rut`, `nombre`, `apellidos`, `fecha_nacimiento`, `sexo`, `peso`, `altura`, `alergias`, `apoderado_id`)
+VALUES ('".$_REQUEST['rut']."', '".$_REQUEST['nombre']."','".$_REQUEST['apellidos']."','".$_REQUEST['fecha_nacimiento']."','".$_REQUEST['sexo']."','".$_REQUEST['peso']."','".$_REQUEST['altura']."','".$_REQUEST['alergias']."','".abs($_REQUEST['apoderado_id'])."');";
+
+				$res = $db->execute($sqlInsert);
+
+				if( !$res ){
+
+					exit( json_encode(	array(
+												'id'		=>	-1,
+												'message'	=>	$db->errorMsg(),
+												'res'		=>	$res,
+												'sql'		=>	$sqlInsert
+											 )
+									)
+						);
+
+				}else{
+
+					$lastId					=	$db->insert_Id();
+					$arrayReturn['lastId']	=	$lastId;
+					#echo json_encode( $arrayReturn,JSON_INVALID_UTF8_IGNORE);
+
+				}
+
+			}
+		
+		}
+	}
+	
+
+
+echo json_encode( $arrayReturn,JSON_INVALID_UTF8_IGNORE);

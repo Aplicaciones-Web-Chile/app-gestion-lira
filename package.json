@@ -1,0 +1,45 @@
+{
+  "name": "dashboard-lira",
+  "version": "0.0.1",
+  "description": "Dashboard",
+  "productName": "Dashboard",
+  "author": "",
+  "private": true,
+  "scripts": {
+    "test": "echo \"No test specified\" && exit 0"
+  },
+  "dependencies": {
+    "@quasar/cli": "^1.2.1",
+    "@quasar/extras": "^1.10.2",
+    "apexcharts": "^3.26.2",
+    "axios": "^1.6.7",
+    "core-js": "^3.6.5",
+    "crypto-js": "^4.2.0",
+    "file-saver": "^2.0.5",
+    "quasar": "^1.0.0",
+    "vue-apexcharts": "^1.6.1",
+    "vue-i18n": "^8.0.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@quasar/app": "^2.0.0",
+    "vue-template-compiler": "^2.7.16"
+  },
+  "browserslist": [
+    "ie >= 11",
+    "last 10 Chrome versions",
+    "last 10 Firefox versions",
+    "last 4 Edge versions",
+    "last 7 Safari versions",
+    "last 8 Android versions",
+    "last 8 ChromeAndroid versions",
+    "last 8 FirefoxAndroid versions",
+    "last 10 iOS versions",
+    "last 5 Opera versions"
+  ],
+  "engines": {
+    "node": ">= 10.18.1",
+    "npm": ">= 6.13.4",
+    "yarn": ">= 1.21.1"
+  }
+}
