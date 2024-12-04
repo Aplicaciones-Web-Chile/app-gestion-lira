@@ -248,7 +248,23 @@ export default {
   },
   methods: {
     irADetalle(id) {
-      this.$router.push("/detalle/" + id);
+      // Si no hay fecha seleccionada, usar la fecha actual
+      const fecha = this.selectedDate || this.formatDate(new Date());
+      
+      // Guardar el ID y la fecha en el store
+      this.$store.commit('cards/setCardDetails', {
+        id: id,
+        date: fecha
+      });
+      
+      // Navegar al detalle usando el path correcto
+      this.$router.push({
+        name: 'detail',
+        query: { 
+          id: id,
+          date: fecha
+        }
+      });
     },
 
     loadCardData(peticion) {

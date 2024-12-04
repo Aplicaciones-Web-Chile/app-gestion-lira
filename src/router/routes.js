@@ -4,29 +4,43 @@ const routes = [
     component: () => import('layouts/Main.vue'),
     children: [
       {
+        path: '',
+        redirect: '/dashboard'
+      },
+      {
         path: '/dashboard',
-        meta: { requiresAuth: true }, 
+        meta: { requiresAuth: true },
         component: () => import('pages/Dashboard.vue')
       },
       {
         path: '/detail',
-        component: () => import('pages/Detail.vue')
+        name: 'detail',
+        meta: { requiresAuth: true },
+        component: () => import('pages/Detail.vue'),
+        props: route => ({
+          cardId: route.query.id,
+          selectedDate: route.query.date
+        })
       },
       {
         path: '/login',
-        meta: { requiresAuth: false }, 
+        name: 'login',
+        meta: { requiresAuth: false },
         component: () => import('pages/login.vue')
       },
       {
         path: '/logout',
-        meta: { requiresAuth: false }, 
+        name: 'logout',
+        meta: { requiresAuth: false },
         component: () => import('pages/logout.vue')
       }
     ]
   },
+  // Ruta para el error 404
   {
     path: '*',
-    component: () => import('pages/login.vue')
+    name: '404',
+    component: () => import('pages/Error404.vue')
   }
 ]
 

@@ -1,14 +1,61 @@
+<!-- 
+  login.vue
+  Página de inicio de sesión
+  
+  Este componente maneja la autenticación de usuarios en la aplicación.
+  Características principales:
+  - Formulario de login con validación
+  - Manejo de errores con mensajes al usuario
+  - Almacenamiento del token de autenticación
+  - Redirección al dashboard después del login exitoso
+-->
 <template>
   <div class="login-container">
-    <!-- Agregar logo arriba del formulario -->
-    <q-form @submit.prevent="onLogin" class="login-form">
-      <img src="~assets/logo-lira.png" width="100px" alt="Logo" class="logo" />
-      <q-input v-model="email" label="Email" />
-      <q-input v-model="password" type="password" label="Password" />
-      <q-btn type="submit" label="Login" class="login-button" color="primary" />
-    </q-form>
+    <q-card class="login-card">
+      <!-- Logo de la empresa -->
+      <div class="text-center q-mb-lg">
+        <img src="~assets/logo-lira.png" width="150" alt="Logo Lira" class="logo" />
+      </div>
 
-    <!-- Alertas de éxito o error -->
+      <!-- Formulario de login -->
+      <q-form @submit.prevent="onLogin" class="q-gutter-md">
+        <q-input
+          v-model="email"
+          label="Usuario"
+          :rules="[val => !!val || 'El usuario es requerido']"
+          outlined
+          class="q-mb-md"
+        >
+          <template v-slot:prepend>
+            <q-icon name="person" />
+          </template>
+        </q-input>
+
+        <q-input
+          v-model="password"
+          type="password"
+          label="Contraseña"
+          :rules="[val => !!val || 'La contraseña es requerida']"
+          outlined
+          class="q-mb-lg"
+        >
+          <template v-slot:prepend>
+            <q-icon name="lock" />
+          </template>
+        </q-input>
+
+        <!-- Botón de login -->
+        <q-btn
+          type="submit"
+          label="Iniciar Sesión"
+          color="primary"
+          class="full-width"
+          :loading="loading"
+        />
+      </q-form>
+    </q-card>
+
+    <!-- Diálogo de notificaciones -->
     <q-dialog v-model="showDialog">
       <q-card>
         <q-card-section>
@@ -23,83 +70,110 @@
 </template>
 
 <script>
+import Const from '../assets/const.js'
+
+/**
+ * Componente Login
+ * Maneja la autenticación de usuarios en la aplicación
+ */
 export default {
+  name: 'LoginPage',
+
   data() {
     return {
-      email: "",
-      password: "",
-      alertMessage: "",
+      email: '',
+      password: '',
+      alertMessage: '',
       showDialog: false,
+      loading: false,
+      // Lista de usuarios autorizados
       users: [
-        { email: "javier", password: "123123" },
-        { email: "Lira", password: "Lira2024" },
-      ],
-    };
+        { email: 'javier', password: '123123' },
+        { email: 'Lira', password: 'Lira2024' }
+      ]
+    }
   },
+
   methods: {
+    /**
+     * Maneja el proceso de inicio de sesión
+     * Valida las credenciales y redirige al dashboard si son correctas
+     */
     onLogin() {
+      this.loading = true;
+
+      // Buscar usuario con las credenciales proporcionadas
       const user = this.users.find(
-        (user) => user.email === this.email && user.password === this.password
+        user => user.email === this.email && user.password === this.password
       );
 
       if (user) {
-        // Usuario encontrado, iniciar sesión
-        const fakeAuthToken = "123456"; // Generar un token falso para el ejemplo
-        localStorage.setItem("authToken", fakeAuthToken);
+        // Credenciales válidas
+        const authToken = this.generateAuthToken();
+        localStorage.setItem('authToken', authToken);
 
-        // Mostrar mensaje de inicio de sesión exitoso
-        this.alertMessage = "Iniciando sesión...";
+        this.alertMessage = 'Iniciando sesión...';
         this.showDialog = true;
-        // Esperar 2 segundos antes de redirigir automáticamente
-          if (this.$route.path !== "/dashboard") {
-            
-            this.$router.push("/dashboard");
-              // Redirigir al dashboard si no estamos allí
-          } 
+
+        // Redirigir al dashboard después de un breve delay
+        setTimeout(() => {
+          this.loading = false;
+          this.$router.push('/dashboard');
+        }, 1000);
       } else {
-        // Usuario no encontrado, mostrar error
-        this.alertMessage = "Error: Email o contraseña incorrectos";
+        // Credenciales inválidas
+        this.loading = false;
+        this.alertMessage = 'Usuario o contraseña incorrectos';
         this.showDialog = true;
       }
     },
-  },
-};
+
+    /**
+     * Genera un token de autenticación simple
+     * TODO: Implementar generación de token más segura
+     */
+    generateAuthToken() {
+      return Math.random().toString(36).substring(2) + Date.now().toString(36);
+    }
+  }
+}
 </script>
 
-<style scoped>
+<style lang="scss">
 .login-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0288d1 0%, #26c6da 100%);
   display: flex;
-  justify-content: center;
   align-items: center;
-  height: 100vh;
-  background-color: #f0f0f0;
-  font-family: Georgia, serif;
+  justify-content: center;
+  padding: 20px;
 }
 
-.login-form {
-  background-color: #fff;
-  padding: 30px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  width: 300px;
-  text-align: center;
-}
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 2rem;
+  border-radius: 12px;
 
-.login-button {
-  background-color: #b0b0b0;
-  transition: box-shadow 0.3s ease;
-  margin-top: 15px;
-}
+  .logo {
+    max-width: 150px;
+    height: auto;
+    margin-bottom: 2rem;
+  }
 
-.login-button:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
-}
+  .q-input {
+    .q-field__control {
+      height: 56px;
+    }
 
-.q-input input {
-  font-family: Georgia, serif;
-}
+    .q-field__marginal {
+      height: 56px;
+    }
+  }
 
-.q-form {
-  text-align: center;
+  .q-btn {
+    height: 44px;
+    font-size: 16px;
+  }
 }
 </style>

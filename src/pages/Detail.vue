@@ -1,36 +1,56 @@
 <template>
-  <q-page class="q-pa-md">
-    <q-card>
-      <q-card-section>
-        <!-- Botón de Volver -->
-        <q-btn
-          label=""
-          color="primary"
-          icon="arrow_back"
-          @click="volverAtras"
+  <q-page padding>
+    <q-card class="detail-card">
+      <q-card-section class="row items-center q-pb-none">
+        <div class="text-h6">{{ title }}</div>
+        <q-space />
+        <q-btn 
+          icon="arrow_back" 
+          flat 
+          round 
+          dense 
+          @click="$router.push('/dashboard')" 
+          label="Volver"
         />
       </q-card-section>
 
-      <!-- Mostrar los datos detallados -->
-      <q-table
-        wrap-cells
-        dense
-        :title="title"
-        :data="detalles"
-        :columns="columns"
-        row-key="index"
-        virtual-scroll
-        class="sticky-header"
-        color="primary"
-        :style_="'height: ' + ($q.screen.height - 130) + 'px'"
-        separator="cell"
-      />
+      <!-- Tabla de datos -->
+      <q-card-section>
+        <q-table
+          wrap-cells
+          dense
+          :data="detalles"
+          :columns="columns"
+          row-key="index"
+          :rows-per-page-options="[10, 20, 50]"
+          class="detail-table"
+        >
+          <!-- Personalización de las celdas de saldo y crédito -->
+          <template v-slot:body-cell-saldo="props">
+            <q-td :props="props">
+              {{ formatCurrency(props.row.saldo) }}
+            </q-td>
+          </template>
+          
+          <template v-slot:body-cell-creditoDisponible="props">
+            <q-td :props="props">
+              {{ formatCurrency(props.row.creditoDisponible) }}
+            </q-td>
+          </template>
 
-      <!-- Botón para descargar los datos en CSV -->
-      <q-card-actions align="right">
+          <!-- Loading state -->
+          <template v-slot:loading>
+            <q-inner-loading showing color="primary" />
+          </template>
+        </q-table>
+      </q-card-section>
+
+      <!-- Botones de acción -->
+      <q-card-actions align="right" class="text-primary">
         <q-btn
+          flat
           label="Descargar CSV"
-          color="primary"
+          icon="download"
           :disable="!detalles.length"
           @click="downloadCSV"
         />
@@ -40,146 +60,201 @@
 </template>
 
 <script>
-import Vue from "vue";
-import Const from "../assets/const.js";
+import { date } from 'quasar'
+import Const from "../assets/const.js"
 
 export default {
+  name: 'DetailPage',
+  
   data() {
     return {
-      id: null,
-      title: null,
-      date: null,
+      title: '',
+      detalles: [],
+      loading: true,
       columns: [
-        { name: "rut", label: "RUT", align: "left", field: "rut" },
-        {
-          name: "sucursal",
-          label: "Sucursal",
-          align: "left",
-          field: "sucursal",
+        { 
+          name: 'rut',
+          label: 'RUT',
+          align: 'left',
+          field: 'rut'
         },
         {
-          name: "nombreRazonSocial",
-          label: "Nombre Razón Social",
-          align: "left",
-          field: "nombreRazonSocial",
+          name: 'sucursal',
+          label: 'Sucursal',
+          align: 'left',
+          field: 'sucursal'
         },
-        { name: "saldo", label: "Saldo", align: "right", field: "saldo" },
         {
-          name: "creditoDisponible",
-          label: "Crédito Disponible",
-          align: "right",
-          field: "creditoDisponible",
+          name: 'nombreRazonSocial',
+          label: 'Nombre Razón Social',
+          align: 'left',
+          field: 'nombreRazonSocial'
         },
-      ],
-      detalles: [
         {
-          rut: "11111-1",
-          sucursal: "00",
-          nombreRazonSocial: "Perico",
-          saldo: 100000,
-          creditoDisponible: 900000,
+          name: 'saldo',
+          label: 'Saldo',
+          align: 'right',
+          field: 'saldo',
+          sortable: true
         },
-      ],
-    };
-  },
-  mounted() {
-    // Cargar datos detallados al montar el componente
-    if (this.$store.state.cards.id === null) {
-      this.$router.push("/Dashboard");
+        {
+          name: 'creditoDisponible',
+          label: 'Crédito Disponible',
+          align: 'right',
+          field: 'creditoDisponible',
+          sortable: true
+        }
+      ]
     }
-    // Obtener los valores del Store
-    this.id = this.$store.state.cards.id;
-    this.date = this.$store.state.cards.date;
-
-    if (this.id === "cuentas_por_pagar") {
-      this.title = "Detalle de cuentas por pagar";
-    } else if (this.id === "cuentas_por_cobrar") {
-      this.title = "Detalle de cuentas por cobrar";
-    }
-
-    this.cargarDetalles();
   },
+
+  created() {
+    // Obtener los parámetros de la URL
+    const { id, date } = this.$route.query;
+    if (!id || !date) {
+      this.$router.push('/dashboard');
+      return;
+    }
+    
+    this.setTitle(id);
+    this.cargarDetalles(id, date);
+  },
+
   methods: {
-    volverAtras() {
-      this.$router.push("/Dashboard");
+    // Configurar el título según el tipo de detalle
+    setTitle(id) {
+      switch(id) {
+        case 'estado_resultado':
+          this.title = 'Detalle de Estado de Resultado';
+          break;
+        case 'flujo_de_caja':
+          this.title = 'Detalle de Flujo de Caja';
+          break;
+        case 'cuentas_por_cobrar':
+          this.title = 'Detalle de Cuentas por Cobrar';
+          break;
+        case 'cuentas_por_pagar':
+          this.title = 'Detalle de Cuentas por Pagar';
+          break;
+        default:
+          this.title = 'Detalle';
+      }
     },
-    cargarDetalles() {
-      this.cargarDetallesDesdeJSON(); // Intentar cargar desde el JSON local
-    },
-    cargarDetalles() {
-    // Configurar la solicitud con el período seleccionado
-    const payload = {
-      peticion: ["detalles"], // Nombre del endpoint
-      Distribuidor: "001", // Cambiar según sea necesario
-      selectedPeriod: this.date // Parámetro tomado del calendario
-    };
 
-    this.$axios
-      .post(`${Const.backend}dashboard.php`, payload)
-      .then((response) => {
-        console.log("Respuesta del backend:", response.data);
+    // Cargar datos desde la API
+    async cargarDetalles(id, selectedDate) {
+      this.loading = true;
+      try {
+        const payload = {
+          peticion: ["detalles"],
+          Distribuidor: "001",
+          selectedPeriod: selectedDate,
+          tipo: id
+        };
+
+        console.log('Enviando payload:', payload);
+
+        const response = await this.$axios.post(
+          `${Const.backend}dashboard.php`,
+          payload
+        );
+
+        console.log('Respuesta del servidor:', response.data);
 
         if (response.data && Array.isArray(response.data.datos)) {
-          const datosMapeados = response.data.datos.map((item, index) => ({
-            index, // Índice único
-            rut: item.RUT || "N/A",
-            sucursal: item.Sucursal || "N/A",
-            nombreRazonSocial: item.Nombre_Razon_Social || "N/A",
-            saldo: item.Saldo || 0,
-            creditoDisponible: item.Credito_Disponible || 0
+          this.detalles = response.data.datos.map((item, index) => ({
+            index,
+            rut: item.RUT || 'N/A',
+            sucursal: item.Sucursal || 'N/A',
+            nombreRazonSocial: item.Nombre_Razon_Social || 'N/A',
+            saldo: Number(item.Saldo) || 0,
+            creditoDisponible: Number(item.Credito_Disponible) || 0
           }));
-          this.detalles = datosMapeados;
-        } else {
-          console.warn("Datos inválidos recibidos:", response.data);
-          this.detalles = [];
         }
-      })
-      .catch((error) => {
-        console.error("Error al cargar los detalles:", error);
-        this.detalles = [];
-      });
-  },
-    convertToCSV(data) {
-      // Crear encabezados
-      const headers = this.columns.map((col) => col.label).join(",");
+      } catch (error) {
+        console.error('Error al cargar detalles:', error);
+        this.$q.notify({
+          color: 'negative',
+          message: 'Error al cargar los detalles',
+          icon: 'error'
+        });
+      } finally {
+        this.loading = false;
+      }
+    },
 
-      // Crear filas asegurando que los valores "falsy" como 0 se mantengan
-      const rows = data.map((row) =>
-        this.columns
-          .map((col) => {
-            const value = row[col.field];
-            return `"${value !== undefined && value !== null ? value : ""}"`; // Aseguramos que 0 sea válido
-          })
-          .join(",")
+    // Formatear valores de moneda
+    formatCurrency(value) {
+      return new Intl.NumberFormat('es-CL', {
+        style: 'currency',
+        currency: 'CLP'
+      }).format(value);
+    },
+
+    // Descargar datos en CSV
+    downloadCSV() {
+      if (!this.detalles.length) return;
+
+      const headers = this.columns.map(col => col.label).join(',');
+      const rows = this.detalles.map(row => 
+        this.columns.map(col => {
+          const value = row[col.field];
+          return col.name.includes('saldo') || col.name.includes('credito')
+            ? this.formatCurrency(value)
+            : `"${value}"`
+        }).join(',')
       );
 
-      // Unir encabezados y filas
-      return [headers, ...rows].join("\n");
-    },
-    downloadCSV() {
-      if (!this.detalles.length) {
-        console.warn("No hay datos disponibles para descargar.");
-        return;
-      }
-
-      // Convertir los datos a CSV
-      const csvContent = this.convertToCSV(this.detalles);
-
-      // Crear un archivo Blob para el CSV
-      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-
-      // Crear un enlace de descarga
-      const link = document.createElement("a");
+      const csvContent = [headers, ...rows].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      
       const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", `detalles_${this.id}.csv`);
-      link.style.visibility = "hidden";
-
-      // Descargar el archivo
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${this.title}_${this.$route.query.date}.csv`);
+      link.style.visibility = 'hidden';
+      
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-    },
-  },
-};
+    }
+  }
+}
 </script>
+
+<style lang="scss">
+.detail-card {
+  min-height: calc(100vh - 100px);
+  margin: 16px;
+}
+
+.detail-table {
+  .q-table__top,
+  .q-table__bottom,
+  thead tr:first-child th {
+    background-color: #fff;
+  }
+  
+  thead tr th {
+    position: sticky;
+    z-index: 1;
+  }
+  
+  thead tr:first-child th {
+    top: 0;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 600px) {
+  .detail-card {
+    margin: 8px;
+  }
+  
+  .q-table {
+    & ::v-deep(.q-table__middle) {
+      max-height: calc(100vh - 250px);
+    }
+  }
+}
+</style>
