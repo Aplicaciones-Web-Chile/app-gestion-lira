@@ -1,6 +1,19 @@
+<!--
+  @file Dashboard.vue
+  @description Componente principal del dashboard que muestra métricas clave del negocio,
+              incluyendo estado de resultados, flujo de caja y cuentas por cobrar/pagar.
+              Implementa visualizaciones interactivas y sistema de caché para optimizar rendimiento.
+  @author Lira
+  @version 1.0.0
+-->
+
 <template>
+  <!-- Contenedor principal del dashboard con padding y clase específica -->
   <q-page class="q-pa-md dashboard-page">
-    <!-- Selector de Fecha -->
+    <!-- Logo corporativo -->
+    <img src="~assets/logo-lira.png" width="150" alt="Logo Lira" class="logo" />
+    
+    <!-- Selector de Fecha: Permite al usuario filtrar datos por fecha específica -->
     <q-card class="q-mb-md date-selector">
       <q-card-section class="row items-center justify-between bg-grey-1">
         <div class="text-subtitle1">SELECCIONE UNA FECHA</div>
@@ -15,7 +28,8 @@
         </q-btn>
       </q-card-section>
     </q-card>
-    <!-- Sección de Tarjetas -->
+    
+    <!-- Sección de Tarjetas KPI: Muestra métricas clave del negocio -->
     <div class="row q-col-gutter-md">
       <div v-for="(card, id) in cards" :key="id" class="col-12 col-sm-6 col-lg-3">
         <q-card :class="['dashboard-card', card.cardClass]">
@@ -44,7 +58,7 @@
       </div>
     </div>
 
-    <!-- Sección del Gráfico -->
+    <!-- Sección del Gráfico: Visualización de ventas, gastos y rentabilidad -->
     <q-card class="q-mt-md dashboard-chart-card">
       <q-card-section class="row items-center justify-between bg-grey-1">
         <div class="text-h6">Ventas - Gastos - Rentabilidad</div>
@@ -93,6 +107,11 @@ import VueApexCharts from "vue-apexcharts";
 import Const from "../assets/const.js";
 import { Loading } from "quasar";
 
+/**
+ * @component DashboardPage
+ * @description Componente principal del dashboard que proporciona una vista general
+ *              del estado financiero y operativo del negocio.
+ */
 export default {
   name: 'DashboardPage',
   components: {
@@ -101,11 +120,16 @@ export default {
   data() {
     const currentYear = new Date().getFullYear();
     return {
+      /** @property {string} selectedDate - Fecha seleccionada para filtrar datos */
       selectedDate: "",
+      /** @property {boolean} loading - Estado de carga general del componente */
       loading: false,
+      /** @property {number|null} loadTimeout - Temporizador para las operaciones de carga */
       loadTimeout: null,
+      /** @property {number|null} chartTimeout - Temporizador para la carga del gráfico */
       chartTimeout: null,
-      cacheExpiration: 1800000, // 30 minutos en milisegundos
+      /** @property {number} cacheExpiration - Tiempo de expiración del caché en milisegundos */
+      cacheExpiration: 1800000, // 30 minutos
       selectedYear: currentYear,
       selectedMonth: { label: "Enero", value: 1 },
       currentYear,
@@ -241,6 +265,10 @@ export default {
     };
   },
   watch: {
+    /**
+     * Observador para el año seleccionado
+     * @param {number} newValue - Nuevo valor seleccionado
+     */
     selectedYear() {
       this.filterMonths();
       this.filterChart();
@@ -272,6 +300,10 @@ export default {
     },
   },
   methods: {
+    /**
+     * Navega al detalle de una tarjeta específica
+     * @param {string} id - Identificador de la tarjeta
+     */
     irADetalle(id) {
       // Si no hay fecha seleccionada, usar la fecha actual
       const fecha = this.selectedDate || this.formatDate(new Date());
@@ -293,7 +325,7 @@ export default {
     },
 
     /**
-     * Verifica si hay datos en caché para una fecha específica
+     * Verifica si existen datos en caché para una fecha específica
      * @param {string} date - Fecha en formato YYYY-MM-DD
      * @param {string} cardKey - Identificador de la tarjeta
      * @returns {Object|null} Datos en caché o null si no existen o están expirados
@@ -314,7 +346,7 @@ export default {
     },
 
     /**
-     * Guarda datos en caché
+     * Almacena datos en el caché local
      * @param {string} date - Fecha en formato YYYY-MM-DD
      * @param {string} cardKey - Identificador de la tarjeta
      * @param {Object} data - Datos a almacenar
@@ -329,10 +361,11 @@ export default {
     },
 
     /**
-     * Carga los datos de una tarjeta específica
-     * @param {string} peticion - Identificador de la tarjeta a cargar
+     * Carga los datos para una tarjeta específica
+     * @param {string} peticion - Identificador de la tarjeta
+     * @returns {Promise<void>}
      */
-    loadCardData(peticion) {
+    async loadCardData(peticion) {
       // Limpiar timeout anterior si existe
       if (this.loadTimeout) {
         clearTimeout(this.loadTimeout);
@@ -396,6 +429,9 @@ export default {
         });
     },
 
+    /**
+     * Aplica la fecha seleccionada y actualiza los datos
+     */
     applyDate() {
       if (this.selectedDate) {
         console.log('Fecha seleccionada:', this.selectedDate);
@@ -413,6 +449,11 @@ export default {
       }
     },
 
+    /**
+     * Formatea una fecha al formato requerido
+     * @param {string|Date} date - Fecha a formatear
+     * @returns {string} Fecha formateada
+     */
     formatDate(date) {
       if (!date) return "";
       const options = { year: "numeric", month: "2-digit", day: "2-digit" };
@@ -424,7 +465,11 @@ export default {
       }
     },
 
-    loadChart() {
+    /**
+     * Carga los datos del gráfico desde el servidor
+     * @returns {Promise<void>}
+     */
+    async loadChart() {
       if (this.chartTimeout) {
         clearTimeout(this.chartTimeout);
       }
@@ -518,6 +563,11 @@ export default {
       });
     },
 
+    /**
+     * Formatea valores monetarios al formato CLP
+     * @param {number} amount - Monto a formatear
+     * @returns {string} Monto formateado en formato CLP
+     */
     formatCurrency(amount) {
       const formatter = new Intl.NumberFormat("es-CL", {
         style: "currency",
@@ -527,6 +577,9 @@ export default {
       return formatter.format(amount).replace("CLP", "").trim();
     },
 
+    /**
+     * Filtra los meses según el año seleccionado
+     */
     filterMonths() {
       if (this.selectedYear === this.currentYear) {
         this.filteredMonths = this.months.filter(
@@ -545,6 +598,10 @@ export default {
       }
     },
   },
+  /**
+   * Hook del ciclo de vida: Mounted
+   * Inicializa el componente y carga los datos iniciales
+   */
   mounted() {
     // Limpiar caché al montar el componente
     this.clearDashboardCache();
@@ -560,6 +617,7 @@ export default {
 </script>
 
 <style>
+/* Estilos específicos para el dashboard */
 .dashboard-page {
   background: #f5f6fa;
 }
