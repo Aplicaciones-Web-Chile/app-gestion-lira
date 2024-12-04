@@ -1,129 +1,85 @@
 <template>
-  <q-page class="q-pa-md dashboard-page dashboard">
-    <q-card class="my-card">
-      <q-card-section style="background-color: #f8f9fa">
-        <!-- <div class="date-selector" > -->
-        <div class="row items-center q-pb-sm">
-          <p class="card-container" style="margin: 10px">
-            SELECCIONE UNA FECHA
-          </p>
-          <q-btn style="margin: 10px" icon="event" flat color="black">
-            <q-popup-proxy transition-show="scale" transition-hide="scale">
-              <q-date v-model="selectedDate">
-                <div class="row items-center justify-end">
-                  <q-btn label="Cancelar" color="black" flat v-close-popup />
-                  <q-btn
-                    label="OK"
-                    color="black"
-                    flat
-                    @click="applyDate"
-                    v-close-popup
-                  />
-                </div>
-              </q-date>
-            </q-popup-proxy>
-          </q-btn>
-        </div>
-
-        <!-- </div> -->
+  <q-page class="q-pa-md dashboard-page">
+    <!-- Selector de Fecha -->
+    <q-card class="q-mb-md date-selector">
+      <q-card-section class="row items-center justify-between bg-grey-1">
+        <div class="text-subtitle1">SELECCIONE UNA FECHA</div>
+        <q-btn flat dense icon="event">
+          <q-popup-proxy>
+            <q-date v-model="selectedDate" mask="YYYY-MM-DD">
+              <div class="row items-center justify-end q-pa-sm">
+                <q-btn label="OK" color="primary" flat @click="applyDate" v-close-popup />
+              </div>
+            </q-date>
+          </q-popup-proxy>
+        </q-btn>
       </q-card-section>
-
-      <q-separator />
-
-      <q-card-actions align="between">
-        <div class="list-group list-group-flush">
-          <div class="list-group-item">
-            <div class="row d-flex align-items-stretch">
-              <div
-                v-for="(card, id) in cards"
-                :key="id"
-                class="col-12 col-sm-6 col-lg-3 mb-4"
-              >
-                <div class="card-container" style="width: 100%">
-                  <q-card
-                    class="text-white custom-card h-100"
-                    :style="{ backgroundColor: card.bgColor }"
-                  >
-                    <q-card-section class="row justify-between items-center">
-                      <div class="card-info col-8">
-                        <div class="text-h6">{{ card.title }}</div>
-                      </div>
-
-                      <div>
-                        <q-btn
-                          class="detail-button"
-                          @click="irADetalle(id)"
-                          label="Detalle"
-                        />
-                      </div>
-                      <div class="col-12">
-                        {{ card.subtitle }}
-                      </div>
-                    </q-card-section>
-                    <q-separator class="bg-white" />
-                    <div class="spinner" v-if="card.loading">
-                      <q-spinner color="primary" size="3em" :thickness="10" />
-                    </div>
-                    <q-card-section class="text-h3"
-                      >{{ card.amount }}
-                    </q-card-section>
-                  </q-card>
-                </div>
+    </q-card>
+    <!-- Sección de Tarjetas -->
+    <div class="row q-col-gutter-md">
+      <div v-for="(card, id) in cards" :key="id" class="col-12 col-sm-6 col-lg-3">
+        <q-card :class="['dashboard-card', card.cardClass]">
+          <q-card-section>
+            <div class="row items-center no-wrap">
+              <div class="col">
+                <div class="text-subtitle1 text-weight-medium text-white">{{ card.title }}</div>
+                <div class="text-caption q-mt-sm text-white">{{ card.subtitle }}</div>
+              </div>
+              <div class="col-auto">
+                <q-btn flat round dense color="white" :icon="card.icon" @click="irADetalle(id)" />
               </div>
             </div>
-          </div>
-        </div>
-      </q-card-actions>
-    </q-card>
-
-    <q-card class="my-card">
-      <q-card-section style="background-color: #f8f9fa">
-        <div class="row">
-          <div class="col-12">
-            <div class="select-container">
-              <p class="card-container">SELECCIONE UNA FECHA</p>
-
-              <q-select
-                v-model="selectedYear"
-                :options="years"
-                label="Año"
-                class="custom-select centered-button stylish-button shadow-button selectors"
-                filled
-                @input="filterChart"
-                style="width: 100px"
-              />
-
-              <q-select
-                v-model="selectedMonth"
-                :options="filteredMonths"
-                label="Mes"
-                class="custom-select centered-button stylish-button shadow-button selectors"
-                @input="filterChart"
-                filled
-                style="width: 100px"
-              />
+          </q-card-section>
+          
+          <q-card-section class="q-pt-none">
+            <div class="text-h4 text-weight-bold text-white">
+              {{ card.amount }}
             </div>
-          </div>
+          </q-card-section>
+        </q-card>
+      </div>
+    </div>
+
+    <!-- Sección del Gráfico -->
+    <q-card class="q-mt-md dashboard-chart-card">
+      <q-card-section class="row items-center justify-between bg-grey-1">
+        <div class="text-h6">Ventas - Gastos - Rentabilidad</div>
+        <div class="row q-gutter-sm">
+          <q-select
+            v-model="selectedYear"
+            :options="years"
+            label="Año"
+            dense
+            outlined
+            style="width: 120px"
+            @input="filterChart"
+          />
+          <q-select
+            v-model="selectedMonth"
+            :options="filteredMonths"
+            label="Mes"
+            dense
+            outlined
+            style="width: 120px"
+            @input="filterChart"
+          />
         </div>
       </q-card-section>
-      <q-separator />
-
-      <q-card-actions align="between">
-        <!-- Animación de Cargando -->
-
-        <!-- Contenedor del Gráfico -->
-        <div id="chart">
+      
+      <q-card-section>
+        <div class="chart-container">
           <div class="spinner" v-if="loadingChart">
             <q-spinner color="primary" size="3em" :thickness="10" />
           </div>
           <apexchart
+            v-else
             type="line"
             height="350"
             :options="chartOptions"
             :series="filteredSeries"
           ></apexchart>
         </div>
-      </q-card-actions>
+      </q-card-section>
     </q-card>
   </q-page>
 </template>
@@ -132,24 +88,20 @@
 import VueApexCharts from "vue-apexcharts";
 import Const from "../assets/const.js";
 import { Loading } from "quasar";
-import Vue from "vue";
 
 export default {
+  name: 'DashboardPage',
   components: {
-    "vue-apex-charts": VueApexCharts,
+    'apexchart': VueApexCharts
   },
   data() {
     const currentYear = new Date().getFullYear();
-    const currentMonth = new Date().getMonth() + 1;
     return {
-      selectedDate: {
-        start: null, // Fecha de inicio seleccionada
-      },
+      selectedDate: "",
       loading: false,
       selectedYear: null,
       selectedMonth: null,
       currentYear,
-      currentMonth,
       loadingChart: true,
       datos: {
         data: [],
@@ -159,55 +111,54 @@ export default {
       showDetail: false,
       monthsPeriod: { value: "whatever" },
       yearsPeriod: { value: "whatever" },
-      years: Array.from({ length: 10 }, (_, i) => currentYear - i),
+      years: [
+        currentYear - 1,
+        currentYear,
+        currentYear + 1,
+        currentYear + 2,
+      ],
       // Datos de las tarjetas
       cards: {
         estado_resultado: {
-          //index:0,
           title: "Estado Resultado",
+          subtitle: "Periodo al 10/2023",
           amount: "$679,938,635",
-          subtitle: "Período al 10/2023",
-          bgColor: "#719FB2",
           loading: false,
           showDateMenu: false,
           selectedDate: [],
           filtro: "selector",
+          cardClass: 'estado-card',
+          icon: 'trending_up'
         },
         flujo_de_caja: {
-          //index:1,
-          title: "Flujo de Caja",
-          amount: "$0",
-          subtitle: "Cargando...",
-          bgColor: "rgb(80, 166, 67)",
+          title: "Flujo de caja",
+          subtitle: "Al 04/12/24",
+          amount: "$1.234.567.890",
           loading: false,
-          showDateMenu: false,
           selectedDate: [],
-
           filtro: "selector",
+          cardClass: 'flujo-card',
+          icon: 'account_balance'
         },
         cuentas_por_cobrar: {
-          //index:2,
           title: "Cuentas por Cobrar",
-          amount: "$0",
-          subtitle: "Cargando...",
-          bgColor: "rgb(80, 166, 67)",
+          subtitle: "Al 04/12/2024",
+          amount: "$422.237.490",
           loading: false,
-          showDateMenu: false,
           selectedDate: [],
-
           filtro: "selector",
+          cardClass: 'cobrar-card',
+          icon: 'attach_money'
         },
         cuentas_por_pagar: {
-          //index:3,
           title: "Cuentas por Pagar",
+          subtitle: "Al 04/12/2024",
           amount: "$0",
-          subtitle: "Cargando...",
-          bgColor: "rgb(216, 35, 39)",
           loading: false,
-          showDateMenu: false,
           selectedDate: [],
-
           filtro: "selector",
+          cardClass: 'pagar-card',
+          icon: 'money_off'
         },
       },
 
@@ -229,68 +180,37 @@ export default {
       series: [],
       chartOptions: {
         chart: {
+          type: 'line',
           height: 350,
-          type: "line",
-          stacked: !true,
           toolbar: {
-            show: true,
-            tools: {
-              download: true, // Mantiene el botón de descarga
-              selection: false, // Mantiene el botón de selección
-              zoom: false, // Mantiene el botón de zoom
-              zoomin: true, // Mantiene el botón de zoom in
-              zoomout: true, // Mantiene el botón de zoom out
-              pan: false, // Mantiene el botón de pan
-              reset: false, // Establece el botón de reset (casa) a false para ocultarlo
-              // Otras herramientas que desees desactivar también pueden establecerse en false aquí
-            },
+            show: true
           },
-        },
-
-        dataLabels: {
-          enabled: false,
+          zoom: {
+            enabled: true
+          }
         },
         stroke: {
-          width: [1, 1, 4],
+          curve: 'smooth',
+          width: 2
         },
-        title: {
-          text: "Ventas - Gastos - Rentabilidad",
-          align: "left",
+        colors: ['#48a9e6', '#66bb6a', '#ef5350'],
+        xaxis: {
+          categories: ['Dic-2023', 'Ene-2024', 'Feb-2024', 'Mar-2024', 'Abr-2024', 'May-2024', 
+                      'Jun-2024', 'Jul-2024', 'Ago-2024', 'Sep-2024', 'Oct-2024', 'Nov-2024'],
         },
-        yaxis: [
-          {
-            axisTicks: {
-              show: false,
-            },
-            axisBorder: {
-              show: true,
-              color: "grey",
-            },
-            labels: {
-              style: {
-                colors: "grey",
-              },
-              formatter: (val) => {
-                return Math.floor(val / 1000000) + "M";
-              },
-            },
-            tooltip: {
-              enabled: true,
-            },
-          },
-        ],
-        tooltip: {
-          fixed: {
-            enabled: true,
-            position: "topLeft",
-            offsetY: 30,
-            offsetX: 60,
-          },
+        yaxis: {
+          labels: {
+            formatter: function(value) {
+              return '$' + value.toLocaleString('es-CL');
+            }
+          }
         },
         legend: {
-          horizontalAlign: "center",
-          offsetX: 40,
+          position: 'top'
         },
+        grid: {
+          borderColor: '#f1f1f1'
+        }
       },
       filteredMonths: [],
     };
@@ -328,52 +248,67 @@ export default {
   },
   methods: {
     irADetalle(id) {
-      this.$store.commit('cards/setId', id);
-      this.$store.commit('cards/setDate', this.formatDate(this.selectedDate));
-      this.$router.push({path: "/detail"});
+      this.$router.push("/detalle/" + id);
+    },
+
+    loadCardData(peticion) {
+      console.log('Cargando datos para:', peticion);
+      this.cards[peticion].loading = true;
+      const formattedDate = this.selectedDate ? this.formatDate(this.selectedDate) : '';
+      
+      this.$axios
+        .post(Const.backend + "dashboard.php", {
+          Distribuidor: "001",
+          peticion: peticion,
+          selectedPeriod: formattedDate
+        })
+        .then((response) => {
+          console.log('Respuesta para', peticion, ':', response.data);
+          if (response.data && response.data.datos) {
+            const datosParsed = response.data.datos;
+            this.$set(this.cards[peticion], 'amount', this.formatCurrency(datosParsed.amount));
+            this.$set(this.cards[peticion], 'subtitle', `Al ${formattedDate}`);
+          }
+        })
+        .catch((error) => {
+          console.error("Error al cargar datos de " + peticion + ":", error);
+          Const.ErrorHandler(this);
+        })
+        .finally(() => {
+          this.cards[peticion].loading = false;
+        });
+    },
+
+    applyDate() {
+      if (this.selectedDate) {
+        console.log('Fecha seleccionada:', this.selectedDate);
+        // Lista de todas las tarjetas que necesitamos actualizar
+        const cardKeys = ['estado_resultado', 'flujo_de_caja', 'cuentas_por_cobrar', 'cuentas_por_pagar'];
+        
+        // Actualizar cada tarjeta
+        cardKeys.forEach(cardKey => {
+          console.log('Actualizando tarjeta:', cardKey);
+          this.loadCardData(cardKey);
+        });
+
+        // También actualizamos el gráfico
+        this.loadChart();
+      }
     },
 
     formatDate(date) {
-      let fecha;
-
-      // Verificar si la fecha es vacía o nula
-      if (date === "" || date === null || isNaN(Date.parse(date))) {
-        fecha = new Date(); // Usar la fecha act ual si no se proporciona una fecha válida
-      } else {
-        fecha = new Date(date); // Convertir la fecha proporcionada a un objeto Date
-      }
-
-      // Formatear la fecha al formato 'día/mes/año'
-      return fecha.toLocaleDateString("es-ES", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
+      if (!date) return "";
+      const options = { year: "numeric", month: "2-digit", day: "2-digit" };
+      return new Date(date).toLocaleDateString("es-CL", options);
     },
-    applyDate() {
-      Object.keys(this.cards).forEach((id) => {
-        this.loadCardData(id); // Carga los datos filtrado
-      });
-    },
-    formatCurrency(amount) {
-      // Crear un formateador de número para pesos chilenos
-      const formatter = new Intl.NumberFormat("es-CL", {
-        style: "currency",
-        currency: "CLP",
-        minimumFractionDigits: 0, // Puedes ajustar el número de decimales aquí
-      });
-
-      // Retirar la moneda del string resultante si no la deseas
-      return formatter.format(amount).replace("CLP", "");
-    },
-
     filterChart() {
       if (this.selectedYear && this.selectedMonth?.value) {
         return this.loadChart();
       }
     },
 
-    loadChart(peticion) {
+    loadChart() {
+      this.loadingChart = true;
       let valorNull = null;
 
       this.$axios
@@ -381,62 +316,29 @@ export default {
           Distribuidor: "001",
           peticion: "ventas_gastos_rentabilidad",
           FilterYears: this.selectedYear,
-          FilterMonth: this.filteredMonths.value,
+          FilterMonths: this.selectedMonth?.value || valorNull,
         })
-        .then((response) => {
-          if (response.data.estado === 1) {
-            this.series = response.data.datos.series;
-            this.chartOptions = {
-              ...this.chartOptions,
-              xaxis: {
-                categories: response.data.datos.categories,
-              },
-              tooltip: {
-                y: {
-                  formatter: (value) => {
-                    return this.formatCurrency(value);
-                  },
-                },
-              },
-            };
-          }
-          this.loadingChart = false;
-        })
-        .catch(Const.ErrorHandler.bind(this, this));
-    },
-
-    loadCardData(peticion) {
-      this.cards[peticion].loading = true;
-      this.$axios
-        .post(
-          Const.backend + "dashboard.php", //Const.backend + "getCuentasPorCobrar.php"
-          {
-            Distribuidor: "001",
-            peticion: peticion,
-            selectedPeriod: this.formatDate(this.selectedDate),
-          }
-        )
         .then((response) => {
           if (response.data && response.data.datos) {
-            const datosParsed = response.data.datos;
-            Vue.set(this.cards, peticion, {
-              title: datosParsed.title,
-              amount: this.formatCurrency(datosParsed.amount),
-              subtitle: datosParsed.subtitle,
-              bgColor: datosParsed.bgColor,
-              loading: false,
-              showDateMenu: false,
-              dateRange: this.cards[peticion].dateRange,
-              selectedDate: this.cards[peticion].selectedDate,
-              filtro: this.cards[peticion].filtro,
-            });
+            this.datos = response.data.datos;
+            this.loadingChart = false;
           }
         })
-        .catch((error) => {
-          console.error("Error loading data", error);
-          this.cards[peticion].loading = false;
+        .catch(Const.ErrorHandler.bind(this, this))
+        .finally(() => {
+          this.loadingChart = false;
         });
     },
+
+    formatCurrency(amount) {
+      const formatter = new Intl.NumberFormat("es-CL", {
+        style: "currency",
+        currency: "CLP",
+        minimumFractionDigits: 0
+      });
+      return formatter.format(amount).replace("CLP", "").trim();
+    },
+
     filterMonths() {
       if (this.selectedYear === this.currentYear) {
         this.filteredMonths = this.months.filter(
@@ -467,57 +369,55 @@ export default {
 
 <style>
 .dashboard-page {
-  background-color: rgb(255, 255, 255);
+  background: #f5f6fa;
 }
 
-.custom-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-around;
-  padding: 15px;
-  border-radius: 10px;
-  margin: 20px 10px; /* Asegúrate de que haya espacio entre las tarjetas cuando se apilen verticalmente */
+.date-selector {
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.date-selector .q-card-section {
+  padding: 12px 16px;
+}
+
+.dashboard-card {
+  transition: all 0.3s ease;
+  border-radius: 12px;
   height: 100%;
 }
 
-.q-separator {
-  margin: 10px 0;
+.dashboard-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0,0,0,0.1);
 }
 
-.q-card__section--vert {
-  padding: 10px;
+/* Clases para los diferentes tipos de tarjetas */
+.estado-card {
+  background: linear-gradient(135deg, #48a9e6 0%, #0288d1 100%) !important;
 }
 
-.text-h3.q-card__section.q-card__section--vert {
-  font-size: 2.5rem;
+.flujo-card {
+  background: linear-gradient(135deg, #66bb6a 0%, #43a047 100%) !important;
 }
 
-@media (max-width: 425px) {
-  .text-h3.q-card__section.q-card__section--vert {
-    font-size: 35px;
-  }
-  .q-card__section--vert {
-    padding: 0px;
-  }
-}
-@media (max-width: 768px) {
-  .q-card__section--vert {
-    padding: 5px;
-  }
+.cobrar-card {
+  background: linear-gradient(135deg, #26a69a 0%, #00897b 100%) !important;
 }
 
-.full-width {
-  width: 100%;
+.pagar-card {
+  background: linear-gradient(135deg, #ef5350 0%, #e53935 100%) !important;
 }
 
-.q-separator {
-  margin: 0;
+.dashboard-chart-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
 }
 
 .chart-container {
   position: relative;
   width: 100%;
-  height: 350px;
+  min-height: 350px;
 }
 
 .spinner {
@@ -529,96 +429,12 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-}
-.custom-select .q-field__control span {
-  color: rgb(0, 0, 0);
+  background: rgba(255,255,255,0.8);
 }
 
-.select-container {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-}
-.stylish-button {
-  border-radius: 8px;
-  border: none;
-  background: linear-gradient(145deg, #ffffff79, #ffffff);
-  color: #fff; /* Texto blanco */
-  transition: all 0.3s ease;
-}
-
-.stylish-button:hover {
-  background: linear-gradient(145deg, #ffffff63, #ffffff);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-}
-.styled-text {
-  font-size: 16px;
-  font-weight: 500;
-  text-decoration: underline;
-  margin: 10px;
-  font-family: Georgia, "Times New Roman", Times, serif;
-}
-.dashboard {
-  padding: 20px;
-  background-color: #f5f5f5;
-  font-family: Arial, sans-serif;
-}
-.detail-button {
-  padding: 8px 5px;
-  color: white;
-  font-weight: lighter;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-  margin-top: 10px;
-}
-
-.detail-button:hover {
-  background-color: rgba(255, 255, 255, 0.4);
-}
-.date-selector {
-  margin-bottom: 40px;
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-  padding: 20px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  background-color: #fff;
-}
-.card-header {
-  display: block;
-}
-
-.date-selector h3 {
-  margin-bottom: 10px;
-}
-.selectors {
-  display: flex;
-  gap: 10px;
-}
-
-select {
-  padding: 10px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
-}
-.card-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px; /* Espaciado debajo de las tarjetas */
-  gap: 20px;
-}
-.card .button-container button {
-  background-color: white;
-  color: #333;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.card .button-container button:hover {
-  background-color: #ddd;
+.q-select {
+  .q-field__control {
+    background: white;
+  }
 }
 </style>
