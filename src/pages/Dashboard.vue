@@ -19,7 +19,11 @@
     <div class="row q-col-gutter-md">
       <div v-for="(card, id) in cards" :key="id" class="col-12 col-sm-6 col-lg-3">
         <q-card :class="['dashboard-card', card.cardClass]">
-          <q-card-section>
+          <q-inner-loading :showing="card.loading">
+            <q-spinner-dots size="50px" color="white" />
+          </q-inner-loading>
+          
+          <q-card-section :class="{ 'blur-content': card.loading }">
             <div class="row items-center no-wrap">
               <div class="col">
                 <div class="text-subtitle1 text-weight-medium text-white">{{ card.title }}</div>
@@ -31,7 +35,7 @@
             </div>
           </q-card-section>
           
-          <q-card-section class="q-pt-none">
+          <q-card-section class="q-pt-none" :class="{ 'blur-content': card.loading }">
             <div class="text-h4 text-weight-bold text-white">
               {{ card.amount }}
             </div>
@@ -76,7 +80,7 @@
             type="line"
             height="350"
             :options="chartOptions"
-            :series="filteredSeries"
+            :series="series"
           ></apexchart>
         </div>
       </q-card-section>
@@ -99,24 +103,74 @@ export default {
     return {
       selectedDate: "",
       loading: false,
-      selectedYear: null,
-      selectedMonth: null,
+      loadTimeout: null,
+      chartTimeout: null,
+      cacheExpiration: 1800000, // 30 minutos en milisegundos
+      selectedYear: currentYear,
+      selectedMonth: { label: "Enero", value: 1 },
       currentYear,
       loadingChart: true,
       datos: {
         data: [],
-      }, // Almacena los datos obtenidos del JSON
-      error: null,
-      cardDate: null,
-      showDetail: false,
-      monthsPeriod: { value: "whatever" },
-      yearsPeriod: { value: "whatever" },
-      years: [
-        currentYear - 1,
-        currentYear,
-        currentYear + 1,
-        currentYear + 2,
+      },
+      series: [
+        {
+          name: 'Ventas',
+          data: []
+        },
+        {
+          name: 'Gastos',
+          data: []
+        },
+        {
+          name: 'Rentabilidad',
+          data: []
+        }
       ],
+      chartOptions: {
+        chart: {
+          type: 'line',
+          height: 350,
+          toolbar: {
+            show: true
+          },
+          zoom: {
+            enabled: true
+          }
+        },
+        stroke: {
+          curve: 'smooth',
+          width: 2
+        },
+        colors: ['#48a9e6', '#66bb6a', '#ef5350'],
+        xaxis: {
+          categories: [],
+        },
+        yaxis: {
+          labels: {
+            formatter: function(value) {
+              return new Intl.NumberFormat('es-CL', {
+                style: 'currency',
+                currency: 'CLP',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+              }).format(value).replace('CLP', '').trim();
+            }
+          }
+        },
+        tooltip: {
+          y: {
+            formatter: function(value) {
+              return new Intl.NumberFormat('es-CL', {
+                style: 'currency',
+                currency: 'CLP',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+              }).format(value).replace('CLP', '').trim();
+            }
+          }
+        }
+      },
       // Datos de las tarjetas
       cards: {
         estado_resultado: {
@@ -177,41 +231,12 @@ export default {
         { label: "Diciembre", value: 12 },
       ],
 
-      series: [],
-      chartOptions: {
-        chart: {
-          type: 'line',
-          height: 350,
-          toolbar: {
-            show: true
-          },
-          zoom: {
-            enabled: true
-          }
-        },
-        stroke: {
-          curve: 'smooth',
-          width: 2
-        },
-        colors: ['#48a9e6', '#66bb6a', '#ef5350'],
-        xaxis: {
-          categories: ['Dic-2023', 'Ene-2024', 'Feb-2024', 'Mar-2024', 'Abr-2024', 'May-2024', 
-                      'Jun-2024', 'Jul-2024', 'Ago-2024', 'Sep-2024', 'Oct-2024', 'Nov-2024'],
-        },
-        yaxis: {
-          labels: {
-            formatter: function(value) {
-              return '$' + value.toLocaleString('es-CL');
-            }
-          }
-        },
-        legend: {
-          position: 'top'
-        },
-        grid: {
-          borderColor: '#f1f1f1'
-        }
-      },
+      years: [
+        currentYear - 1,
+        currentYear,
+        currentYear + 1,
+        currentYear + 2,
+      ],
       filteredMonths: [],
     };
   },
@@ -267,11 +292,79 @@ export default {
       });
     },
 
-    loadCardData(peticion) {
-      console.log('Cargando datos para:', peticion);
-      this.cards[peticion].loading = true;
-      const formattedDate = this.selectedDate ? this.formatDate(this.selectedDate) : '';
+    /**
+     * Verifica si hay datos en caché para una fecha específica
+     * @param {string} date - Fecha en formato YYYY-MM-DD
+     * @param {string} cardKey - Identificador de la tarjeta
+     * @returns {Object|null} Datos en caché o null si no existen o están expirados
+     */
+    checkCache(date, cardKey) {
+      const cacheKey = `dashboard_${cardKey}_${date}`;
+      const cached = localStorage.getItem(cacheKey);
       
+      if (cached) {
+        const { timestamp, data } = JSON.parse(cached);
+        if (Date.now() - timestamp < this.cacheExpiration) {
+          return data;
+        }
+        // Si los datos están expirados, eliminarlos
+        localStorage.removeItem(cacheKey);
+      }
+      return null;
+    },
+
+    /**
+     * Guarda datos en caché
+     * @param {string} date - Fecha en formato YYYY-MM-DD
+     * @param {string} cardKey - Identificador de la tarjeta
+     * @param {Object} data - Datos a almacenar
+     */
+    saveToCache(date, cardKey, data) {
+      const cacheKey = `dashboard_${cardKey}_${date}`;
+      const cacheData = {
+        timestamp: Date.now(),
+        data: data
+      };
+      localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    },
+
+    /**
+     * Carga los datos de una tarjeta específica
+     * @param {string} peticion - Identificador de la tarjeta a cargar
+     */
+    loadCardData(peticion) {
+      // Limpiar timeout anterior si existe
+      if (this.loadTimeout) {
+        clearTimeout(this.loadTimeout);
+      }
+
+      const formattedDate = this.selectedDate ? this.formatDate(this.selectedDate) : this.formatDate(new Date());
+      
+      // Verificar caché
+      const cachedData = this.checkCache(formattedDate, peticion);
+      if (cachedData) {
+        this.$set(this.cards[peticion], 'amount', this.formatCurrency(cachedData.amount));
+        this.$set(this.cards[peticion], 'subtitle', `Al ${formattedDate}`);
+        return;
+      }
+
+      // Activar loading
+      this.$set(this.cards[peticion], 'loading', true);
+
+      // Configurar timeout para error
+      this.loadTimeout = setTimeout(() => {
+        if (this.cards[peticion].loading) {
+          this.$set(this.cards[peticion], 'loading', false);
+          this.$q.notify({
+            type: 'negative',
+            message: `No se pudo cargar la información de ${this.cards[peticion].title}`,
+            position: 'top',
+            timeout: 3000
+          });
+        }
+      }, 15000); // 15 segundos de timeout
+
+      // Realizar la petición
       this.$axios
         .post(Const.backend + "dashboard.php", {
           Distribuidor: "001",
@@ -279,19 +372,27 @@ export default {
           selectedPeriod: formattedDate
         })
         .then((response) => {
-          console.log('Respuesta para', peticion, ':', response.data);
           if (response.data && response.data.datos) {
             const datosParsed = response.data.datos;
             this.$set(this.cards[peticion], 'amount', this.formatCurrency(datosParsed.amount));
             this.$set(this.cards[peticion], 'subtitle', `Al ${formattedDate}`);
+            
+            // Guardar en caché
+            this.saveToCache(formattedDate, peticion, datosParsed);
           }
         })
         .catch((error) => {
           console.error("Error al cargar datos de " + peticion + ":", error);
-          Const.ErrorHandler(this);
+          this.$q.notify({
+            type: 'negative',
+            message: `Error al cargar ${this.cards[peticion].title}`,
+            position: 'top',
+            timeout: 3000
+          });
         })
         .finally(() => {
-          this.cards[peticion].loading = false;
+          clearTimeout(this.loadTimeout);
+          this.$set(this.cards[peticion], 'loading', false);
         });
     },
 
@@ -324,26 +425,97 @@ export default {
     },
 
     loadChart() {
+      if (this.chartTimeout) {
+        clearTimeout(this.chartTimeout);
+      }
+
       this.loadingChart = true;
-      let valorNull = null;
+      console.log('Iniciando carga del gráfico:', {
+        año: this.selectedYear,
+        mes: this.selectedMonth,
+        endpoint: Const.backend + "dashboard.php"
+      });
+
+      const params = {
+        Distribuidor: "001",
+        peticion: "ventas_gastos_rentabilidad",
+        FilterYears: this.selectedYear,
+        FilterMonths: this.selectedMonth?.value || null,
+      };
+
+      console.log('Parámetros de la petición:', params);
 
       this.$axios
-        .post(Const.backend + "dashboard.php", {
-          Distribuidor: "001",
-          peticion: "ventas_gastos_rentabilidad",
-          FilterYears: this.selectedYear,
-          FilterMonths: this.selectedMonth?.value || valorNull,
-        })
+        .post(Const.backend + "dashboard.php", params)
         .then((response) => {
-          if (response.data && response.data.datos) {
-            this.datos = response.data.datos;
-            this.loadingChart = false;
+          console.log('Estructura completa de la respuesta:', {
+            data: response.data,
+            datos: response.data?.datos,
+            tipo: response.data?.datos ? typeof response.data.datos : 'undefined',
+            esArray: Array.isArray(response.data?.datos),
+            keys: response.data?.datos ? Object.keys(response.data.datos) : []
+          });
+          
+          if (!response.data?.datos) {
+            throw new Error('No hay datos en la respuesta');
+          }
+
+          const datos = response.data.datos;
+          
+          // Verificar si los datos ya vienen en formato ApexCharts
+          if (datos.categories && datos.series) {
+            console.log('Datos en formato ApexCharts detectados:', datos);
+            
+            // Actualizar las categorías del eje X
+            this.chartOptions = {
+              ...this.chartOptions,
+              xaxis: {
+                categories: datos.categories
+              }
+            };
+
+            // Actualizar las series
+            this.series = datos.series.map(serie => ({
+              ...serie,
+              data: serie.data.map(value => parseFloat(value) || 0)
+            }));
+
+            console.log('Series actualizadas:', this.series);
+          } else {
+            throw new Error('Formato de datos no válido');
           }
         })
-        .catch(Const.ErrorHandler.bind(this, this))
+        .catch((error) => {
+          console.error("Error detallado al cargar el gráfico:", {
+            mensaje: error.message,
+            respuesta: error.response?.data,
+            status: error.response?.status,
+            error: error
+          });
+          
+          this.$q.notify({
+            type: 'negative',
+            message: `Error al cargar el gráfico: ${error.message}`,
+            position: 'top',
+            timeout: 5000
+          });
+        })
         .finally(() => {
+          clearTimeout(this.chartTimeout);
           this.loadingChart = false;
         });
+    },
+
+    /**
+     * Limpia todo el caché relacionado con el dashboard
+     */
+    clearDashboardCache() {
+      const keys = Object.keys(localStorage);
+      keys.forEach(key => {
+        if (key.startsWith('dashboard_') || key.startsWith('chart_')) {
+          localStorage.removeItem(key);
+        }
+      });
     },
 
     formatCurrency(amount) {
@@ -374,10 +546,14 @@ export default {
     },
   },
   mounted() {
-    // Lógica para cargar datos dinámicos para cada tarjeta
-    this.loadCardData("cuentas_por_pagar");
-    this.loadCardData("cuentas_por_cobrar");
-    this.loadCardData("flujo_de_caja");
+    // Limpiar caché al montar el componente
+    this.clearDashboardCache();
+    
+    // Cargar datos iniciales
+    const cardKeys = ['cuentas_por_pagar', 'cuentas_por_cobrar', 'flujo_de_caja'];
+    cardKeys.forEach(key => this.loadCardData(key));
+    
+    // Cargar el gráfico con los valores iniciales
     this.loadChart();
   },
 };
@@ -452,5 +628,11 @@ export default {
   .q-field__control {
     background: white;
   }
+}
+
+.blur-content {
+  filter: blur(2px);
+  opacity: 0.7;
+  transition: all 0.3s ease;
 }
 </style>
