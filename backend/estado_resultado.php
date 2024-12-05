@@ -4,7 +4,7 @@
  * 
  * Este archivo PHP está diseñado para consumir un archivo JSON almacenado localmente y devolver su contenido en formato JSON.
  * 
- * @author [Tu nombre]
+ * @author [Aplicaciones Web]
  * @version 1.0
  */
 

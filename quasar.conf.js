@@ -69,6 +69,10 @@ module.exports = function (/* ctx */) {
       chainWebpack (/* chain */) {
         //
       },
+      env: {
+        HTTPS: true,
+        API_URL: JSON.stringify(process.env.API_URL || 'https://your-api-url.com')
+      },
     },
 
     // Full list of options: https://v1.quasar.dev/quasar-cli/quasar-conf-js#Property%3A-devServer
@@ -122,9 +126,9 @@ module.exports = function (/* ctx */) {
       workboxPluginMode: 'GenerateSW', // 'GenerateSW' or 'InjectManifest'
       workboxOptions: {}, // only for GenerateSW
       manifest: {
-        name: `Pediatra a tu casa`,
-        short_name: `Pediatra App`,
-        description: `Somos tu pediatra a domicilio en Santiago`,
+        name: `Lira Gestión`,
+        short_name: `Lira`,
+        description: `Sistema de gestión Lira`,
         display: 'standalone',
         orientation: 'portrait',
         background_color: '#ffffff',
