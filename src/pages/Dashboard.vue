@@ -11,7 +11,9 @@
   <!-- Contenedor principal del dashboard con padding y clase específica -->
   <q-page class="q-pa-md dashboard-page">
     <!-- Logo corporativo -->
-    <img src="~assets/logo-lira.png" width="150" alt="Logo Lira" class="logo" />
+    <div class="logo-container">
+      <img src="~assets/logo-lira.png" width="150" alt="Logo Lira" class="logo" />
+    </div>
     
     <!-- Selector de Fecha: Permite al usuario filtrar datos por fecha específica -->
     <q-card class="q-mb-md date-selector">
@@ -620,6 +622,17 @@ export default {
 /* Estilos específicos para el dashboard */
 .dashboard-page {
   background: #f5f6fa;
+}
+
+.logo-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.logo {
+  height: auto;
+  object-fit: contain;
 }
 
 .date-selector {
