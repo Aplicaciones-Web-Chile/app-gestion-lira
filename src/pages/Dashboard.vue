@@ -8,106 +8,167 @@
 -->
 
 <template>
-  <!-- Contenedor principal del dashboard con padding y clase específica -->
-  <q-page class="q-pa-md dashboard-page">
-    <!-- Logo corporativo -->
-    <div class="logo-container">
-      <img src="~assets/logo-lira.png" width="150" alt="Logo Lira" class="logo" />
-    </div>
-    
-    <!-- Selector de Fecha: Permite al usuario filtrar datos por fecha específica -->
-    <q-card class="q-mb-md date-selector">
-      <q-card-section class="row items-center justify-between bg-grey-1">
-        <div class="text-subtitle1">SELECCIONE UNA FECHA</div>
-        <q-btn flat dense icon="event">
-          <q-popup-proxy>
-            <q-date v-model="selectedDate" mask="YYYY-MM-DD">
-              <div class="row items-center justify-end q-pa-sm">
-                <q-btn label="OK" color="primary" flat @click="applyDate" v-close-popup />
-              </div>
-            </q-date>
-          </q-popup-proxy>
-        </q-btn>
-      </q-card-section>
-    </q-card>
-    
-    <!-- Sección de Tarjetas KPI: Muestra métricas clave del negocio -->
-    <div class="row q-col-gutter-md">
-      <div v-for="(card, id) in cards" :key="id" class="col-12 col-sm-6 col-lg-3">
-        <q-card :class="['dashboard-card', card.cardClass]">
-          <q-inner-loading :showing="card.loading">
-            <q-spinner-dots size="50px" color="white" />
-          </q-inner-loading>
-          
-          <q-card-section :class="{ 'blur-content': card.loading }">
-            <div class="row items-center no-wrap">
-              <div class="col">
-                <div class="text-subtitle1 text-weight-medium text-white">{{ card.title }}</div>
-                <div class="text-caption q-mt-sm text-white">{{ card.subtitle }}</div>
-              </div>
-              <div class="col-auto">
-                <q-btn flat round dense color="white" :icon="card.icon" @click="irADetalle(id)" />
-              </div>
-            </div>
-          </q-card-section>
-          
-          <q-card-section class="q-pt-none" :class="{ 'blur-content': card.loading }">
-            <div class="text-h4 text-weight-bold text-white">
-              {{ card.amount }}
-            </div>
-          </q-card-section>
-        </q-card>
+  <div>
+    <!-- Contenedor principal del dashboard con padding y clase específica -->
+    <q-page class="q-pa-md dashboard-page">
+      <!-- Logo corporativo -->
+      <div class="logo-container">
+        <img src="~assets/logo-lira.png" width="150" alt="Logo Lira" class="logo" />
       </div>
-    </div>
-
-    <!-- Sección del Gráfico: Visualización de ventas, gastos y rentabilidad -->
-    <q-card class="q-mt-md dashboard-chart-card">
-      <q-card-section class="row items-center justify-between bg-grey-1">
-        <div class="text-h6">Ventas - Gastos - Rentabilidad</div>
-        <div class="row q-gutter-sm">
-          <q-select
-            v-model="selectedYear"
-            :options="years"
-            label="Año"
-            dense
-            outlined
-            style="width: 120px"
-            @input="filterChart"
-          />
-          <q-select
-            v-model="selectedMonth"
-            :options="filteredMonths"
-            label="Mes"
-            dense
-            outlined
-            style="width: 120px"
-            @input="filterChart"
-          />
-        </div>
-      </q-card-section>
       
-      <q-card-section>
-        <div class="chart-container">
-          <div class="spinner" v-if="loadingChart">
-            <q-spinner color="primary" size="3em" :thickness="10" />
-          </div>
-          <apexchart
-            v-else
-            type="line"
-            height="350"
-            :options="chartOptions"
-            :series="series"
-          ></apexchart>
+      <!-- Selector de Fecha: Permite al usuario filtrar datos por fecha específica -->
+      <q-card class="q-mb-md date-selector">
+        <q-card-section class="row items-center justify-between bg-grey-1">
+          <div class="text-subtitle1">SELECCIONE UNA FECHA</div>
+          <q-btn flat dense icon="event">
+            <q-popup-proxy>
+              <q-date v-model="selectedDate" mask="YYYY-MM-DD">
+                <div class="row items-center justify-end q-pa-sm">
+                  <q-btn label="OK" color="primary" flat @click="applyDate" v-close-popup />
+                </div>
+              </q-date>
+            </q-popup-proxy>
+          </q-btn>
+        </q-card-section>
+      </q-card>
+      
+      <!-- Sección de Tarjetas KPI: Muestra métricas clave del negocio -->
+      <div class="row q-col-gutter-md">
+        <div v-for="(card, id) in cards" :key="id" class="col-12 col-sm-6 col-lg-3">
+          <q-card :class="['dashboard-card', card.cardClass]">
+            <q-inner-loading :showing="card.loading">
+              <q-spinner-dots size="50px" color="white" />
+            </q-inner-loading>
+            
+            <q-card-section :class="{ 'blur-content': card.loading }">
+              <div class="row items-center no-wrap">
+                <div class="col">
+                  <div class="text-subtitle1 text-weight-medium text-white">{{ card.title }}</div>
+                  <div class="text-caption q-mt-sm text-white">{{ card.subtitle }}</div>
+                </div>
+                <div class="col-auto">
+                  <q-btn flat round dense color="white" :icon="card.icon" @click="mostrarDetalle(id)" />
+                </div>
+              </div>
+            </q-card-section>
+            
+            <q-card-section class="q-pt-none" :class="{ 'blur-content': card.loading }">
+              <div class="text-h4 text-weight-bold text-white">
+                {{ card.amount }}
+              </div>
+            </q-card-section>
+          </q-card>
         </div>
-      </q-card-section>
-    </q-card>
-  </q-page>
+      </div>
+
+      <!-- Sección del Gráfico: Visualización de ventas, gastos y rentabilidad -->
+      <q-card class="q-mt-md dashboard-chart-card">
+        <q-card-section class="row items-center justify-between bg-grey-1">
+          <div class="text-h6">Ventas - Gastos - Rentabilidad</div>
+          <div class="row q-gutter-sm">
+            <q-select
+              v-model="selectedYear"
+              :options="years"
+              label="Año"
+              dense
+              outlined
+              style="width: 120px"
+              @input="filterChart"
+            />
+            <q-select
+              v-model="selectedMonth"
+              :options="filteredMonths"
+              label="Mes"
+              dense
+              outlined
+              style="width: 120px"
+              @input="filterChart"
+            />
+          </div>
+        </q-card-section>
+        
+        <q-card-section>
+          <div class="chart-container">
+            <div class="spinner" v-if="loadingChart">
+              <q-spinner color="primary" size="3em" :thickness="10" />
+            </div>
+            <apexchart
+              v-else
+              type="line"
+              height="350"
+              :options="chartOptions"
+              :series="series"
+            ></apexchart>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-page>
+
+    <!-- Popup para detalles -->
+    <q-dialog v-model="showDetailDialog" persistent maximized>
+      <q-card class="column no-wrap">
+        <q-card-section class="row items-center bg-primary text-white q-px-md">
+          <div class="text-h6">{{ detalleTitle }}</div>
+          <q-space />
+          <q-btn icon="close" flat round dense v-close-popup />
+        </q-card-section>
+
+        <q-card-section class="col q-pa-md">
+          <div v-if="loadingDetalle" class="text-center q-pa-md">
+            <q-spinner-dots color="primary" size="40px" />
+          </div>
+          <div v-else>
+            <div class="row items-center justify-between q-mb-md">
+              <div class="text-subtitle2">
+                Registros encontrados: {{ detalleData.length }}
+              </div>
+              <q-btn
+                color="primary"
+                icon="download"
+                label="Exportar CSV"
+                @click="exportToCSV"
+              />
+            </div>
+
+            <q-input
+              v-model="filter"
+              label="Buscar"
+              dense
+              class="q-mb-md"
+            >
+              <template v-slot:append>
+                <q-icon name="search" />
+              </template>
+            </q-input>
+
+            <q-markup-table flat bordered>
+              <thead>
+                <tr>
+                  <th class="text-left">RUT</th>
+                  <th class="text-left">Razón Social</th>
+                  <th class="text-right">Saldo</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in filteredData" :key="row.RUTP">
+                  <td class="text-left">{{ row.RUTP }}</td>
+                  <td class="text-left">{{ row.RAZO }}</td>
+                  <td class="text-right">{{ formatCurrency(row.SALD) }}</td>
+                </tr>
+              </tbody>
+            </q-markup-table>
+          </div>
+        </q-card-section>
+      </q-card>
+    </q-dialog>
+  </div>
 </template>
 
 <script>
 import VueApexCharts from "vue-apexcharts";
 import Const from "../assets/const.js";
 import { Loading } from "quasar";
+import XLSX from 'xlsx';
 
 /**
  * @component DashboardPage
@@ -264,6 +325,46 @@ export default {
         currentYear + 2,
       ],
       filteredMonths: [],
+
+      // Datos para el popup de detalles
+      showDetailDialog: false,
+      detalleTitle: '',
+      detalleData: [],
+      loadingDetalle: false,
+      filter: '',
+      
+      // Configuración de la tabla
+      tableColumns: [
+        { 
+          name: 'RUTP', 
+          label: 'RUT', 
+          field: 'RUTP', 
+          align: 'left',
+          sortable: true 
+        },
+        { 
+          name: 'RAZO', 
+          label: 'Razón Social', 
+          field: 'RAZO', 
+          align: 'left',
+          sortable: true 
+        },
+        { 
+          name: 'SALD', 
+          label: 'Saldo', 
+          field: 'SALD',
+          align: 'right',
+          sortable: true,
+          format: val => this.formatCurrency(val)
+        }
+      ],
+      tablePagination: {
+        sortBy: 'SALD',
+        descending: true,
+        page: 1,
+        rowsPerPage: 10,
+        rowsNumber: 0
+      }
     };
   },
   watch: {
@@ -283,6 +384,17 @@ export default {
     },
   },
   computed: {
+    filteredData() {
+      if (!this.filter) {
+        return this.detalleData;
+      }
+      const searchTerm = this.filter.toLowerCase();
+      return this.detalleData.filter(item => 
+        (item.RUTP || '').toLowerCase().includes(searchTerm) ||
+        (item.RAZO || '').toLowerCase().includes(searchTerm) ||
+        (item.SALD || '').toString().includes(searchTerm)
+      );
+    },
     filteredSeries() {
       // Añadir esta propiedad computada
       if (!this.selectedDateRange) {
@@ -452,22 +564,6 @@ export default {
     },
 
     /**
-     * Formatea una fecha al formato requerido
-     * @param {string|Date} date - Fecha a formatear
-     * @returns {string} Fecha formateada
-     */
-    formatDate(date) {
-      if (!date) return "";
-      const options = { year: "numeric", month: "2-digit", day: "2-digit" };
-      return new Date(date).toLocaleDateString("es-CL", options);
-    },
-    filterChart() {
-      if (this.selectedYear && this.selectedMonth?.value) {
-        return this.loadChart();
-      }
-    },
-
-    /**
      * Carga los datos del gráfico desde el servidor
      * @returns {Promise<void>}
      */
@@ -566,6 +662,22 @@ export default {
     },
 
     /**
+     * Formatea una fecha al formato requerido
+     * @param {string|Date} date - Fecha a formatear
+     * @returns {string} Fecha formateada
+     */
+    formatDate(date) {
+      if (!date) return "";
+      const options = { year: "numeric", month: "2-digit", day: "2-digit" };
+      return new Date(date).toLocaleDateString("es-CL", options);
+    },
+    filterChart() {
+      if (this.selectedYear && this.selectedMonth?.value) {
+        return this.loadChart();
+      }
+    },
+
+    /**
      * Formatea valores monetarios al formato CLP
      * @param {number} amount - Monto a formatear
      * @returns {string} Monto formateado en formato CLP
@@ -597,6 +709,131 @@ export default {
         !this.filteredMonths.some((month) => month.value === this.selectedMonth)
       ) {
         this.selectedMonth = null;
+      }
+    },
+
+    /**
+     * Muestra el detalle de una tarjeta en un popup
+     * @param {string} id - Identificador de la tarjeta
+     */
+    async mostrarDetalle(tipo) {
+      try {
+        this.loadingDetalle = true;
+        this.showDetailDialog = true;
+        this.detalleData = [];
+        
+        // Establecer el título según el tipo de detalle
+        this.detalleTitle = tipo === 'cuentas_por_cobrar' ? 'Detalle Cuentas por Cobrar' : 'Detalle Cuentas por Pagar';
+        
+        // Construir el endpoint
+        const endpoint = tipo === 'cuentas_por_cobrar' ? 'cuentas_por_cobrar_detalle' : 'cuentas_por_pagar_detalle';
+        
+        // Obtener la fecha formateada
+        const formattedDate = this.selectedDate ? this.formatDate(this.selectedDate) : this.formatDate(new Date());
+        
+        // Realizar la petición
+        const response = await this.$axios.post(
+          Const.backend + "dashboard.php",
+          {
+            peticion: endpoint,
+            Distribuidor: "001",
+            selectedPeriod: formattedDate
+          }
+        );
+
+        console.log('Respuesta completa:', response.data);
+        console.log('Estructura de datos:', {
+          tieneData: !!response.data,
+          tieneDatos: !!response.data?.datos,
+          esArray: Array.isArray(response.data?.datos),
+          longitud: response.data?.datos?.length,
+          primerElemento: response.data?.datos?.[0]
+        });
+
+        // Verificar y procesar la respuesta
+        if (response.data && response.data.datos && Array.isArray(response.data.datos)) {
+          // Asegurarse que cada elemento tenga las propiedades necesarias y los tipos correctos
+          this.detalleData = response.data.datos.map(item => {
+            const mappedItem = {
+              RUTP: item.RUTP || '',
+              RAZO: item.RAZO || '',
+              SALD: parseFloat(item.SALD || 0)
+            };
+            console.log('Item mapeado:', mappedItem);
+            return mappedItem;
+          });
+          
+          console.log('Datos procesados:', this.detalleData);
+          
+          // Actualizar el número total de filas para la paginación
+          this.tablePagination = {
+            ...this.tablePagination,
+            rowsNumber: this.detalleData.length
+          };
+
+          // Forzar la actualización de la tabla
+          this.$nextTick(() => {
+            if (this.detalleData.length > 0) {
+              console.log('Actualizando tabla con', this.detalleData.length, 'registros');
+            }
+          });
+        } else {
+          console.error('La respuesta no tiene el formato esperado:', response.data);
+          this.detalleData = [];
+        }
+      } catch (error) {
+        console.error('Error al cargar los detalles:', error);
+        this.$q.notify({
+          color: 'negative',
+          position: 'top',
+          message: 'Error al cargar los detalles. Por favor, intente nuevamente.',
+          icon: 'warning'
+        });
+        this.detalleData = [];
+      } finally {
+        this.loadingDetalle = false;
+      }
+    },
+    exportToCSV() {
+      try {
+        if (!this.detalleData || !this.detalleData.length) {
+          throw new Error('No hay datos para exportar');
+        }
+
+        // Crear el contenido CSV con BOM para soporte de caracteres especiales
+        const BOM = "\uFEFF";
+        const headers = ['RUT;Razón Social;Saldo\n'];
+        const rows = this.detalleData.map(item => {
+          const rut = item.RUTP || '';
+          const razon = item.RAZO || '';
+          const saldo = item.SALD || 0;
+          return `${rut};${razon};${saldo}\n`;
+        });
+        const csvContent = BOM + headers.concat(rows).join('');
+        
+        // Crear el blob y el link de descarga
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        
+        // Crear URL del blob
+        const url = window.URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'detalle_cuentas.csv');
+        
+        // Agregar link al documento, hacer click y remover
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Liberar el URL
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Error al exportar:', error);
+        this.$q.notify({
+          color: 'negative',
+          message: 'Error al exportar los datos',
+          icon: 'warning'
+        });
       }
     },
   },
