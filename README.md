@@ -1,4 +1,4 @@
-# Quasar App (app-pediatra)
+# Quasar App (app-gestion-distribuidora-lira)
 
 A Quasar Framework app
 

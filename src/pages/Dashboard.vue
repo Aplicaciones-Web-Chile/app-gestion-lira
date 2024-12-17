@@ -150,8 +150,8 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="row in filteredData" :key="row.RUTP">
-                  <td class="text-left">{{ row.RUTP }}</td>
+                <tr v-for="row in filteredData" :key="row.RUT">
+                  <td class="text-left">{{ row.RUT }}</td>
                   <td class="text-left">{{ row.RAZO }}</td>
                   <td class="text-right">{{ formatCurrency(row.SALD) }}</td>
                 </tr>
@@ -336,9 +336,9 @@ export default {
       // Configuración de la tabla
       tableColumns: [
         { 
-          name: 'RUTP', 
+          name: 'RUT', 
           label: 'RUT', 
-          field: 'RUTP', 
+          field: 'RUT', 
           align: 'left',
           sortable: true 
         },
@@ -390,7 +390,7 @@ export default {
       }
       const searchTerm = this.filter.toLowerCase();
       return this.detalleData.filter(item => 
-        (item.RUTP || '').toLowerCase().includes(searchTerm) ||
+        (item.RUT || '').toLowerCase().includes(searchTerm) ||
         (item.RAZO || '').toLowerCase().includes(searchTerm) ||
         (item.SALD || '').toString().includes(searchTerm)
       );
@@ -755,7 +755,7 @@ export default {
           // Asegurarse que cada elemento tenga las propiedades necesarias y los tipos correctos
           this.detalleData = response.data.datos.map(item => {
             const mappedItem = {
-              RUTP: item.RUTP || '',
+              RUT: item.RUTC || item.RUTP || '', // Intentamos obtener RUTC o RUTP
               RAZO: item.RAZO || '',
               SALD: parseFloat(item.SALD || 0)
             };
@@ -795,16 +795,19 @@ export default {
       }
     },
     exportToCSV() {
-      try {
-        if (!this.detalleData || !this.detalleData.length) {
-          throw new Error('No hay datos para exportar');
-        }
+      if (!this.detalleData || this.detalleData.length === 0) {
+        this.$q.notify({
+          message: 'No hay datos para exportar',
+          color: 'warning'
+        })
+        return
+      }
 
-        // Crear el contenido CSV con BOM para soporte de caracteres especiales
+      try {
         const BOM = "\uFEFF";
         const headers = ['RUT;Razón Social;Saldo\n'];
         const rows = this.detalleData.map(item => {
-          const rut = item.RUTP || '';
+          const rut = item.RUT || '';
           const razon = item.RAZO || '';
           const saldo = item.SALD || 0;
           return `${rut};${razon};${saldo}\n`;
