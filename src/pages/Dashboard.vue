@@ -15,7 +15,7 @@
       <div class="logo-container">
         <img src="~assets/logo-lira.png" width="150" alt="Logo Lira" class="logo" />
       </div>
-      
+
       <!-- Selector de Fecha: Permite al usuario filtrar datos por fecha específica -->
       <q-card class="q-mb-md date-selector">
         <q-card-section class="row items-center justify-between bg-grey-1">
@@ -31,7 +31,7 @@
           </q-btn>
         </q-card-section>
       </q-card>
-      
+
       <!-- Sección de Tarjetas KPI: Muestra métricas clave del negocio -->
       <div class="row q-col-gutter-md">
         <div v-for="(card, id) in cards" :key="id" class="col-12 col-sm-6 col-lg-3">
@@ -39,7 +39,7 @@
             <q-inner-loading :showing="card.loading">
               <q-spinner-dots size="50px" color="white" />
             </q-inner-loading>
-            
+
             <q-card-section :class="{ 'blur-content': card.loading }">
               <div class="row items-center no-wrap">
                 <div class="col">
@@ -51,7 +51,7 @@
                 </div>
               </div>
             </q-card-section>
-            
+
             <q-card-section class="q-pt-none" :class="{ 'blur-content': card.loading }">
               <div class="text-h4 text-weight-bold text-white">
                 {{ card.amount }}
@@ -86,7 +86,7 @@
             />
           </div>
         </q-card-section>
-        
+
         <q-card-section>
           <div class="chart-container">
             <div class="spinner" v-if="loadingChart">
@@ -141,22 +141,49 @@
               </template>
             </q-input>
 
-            <q-markup-table flat bordered>
-              <thead>
-                <tr>
-                  <th class="text-left">RUT</th>
-                  <th class="text-left">Razón Social</th>
-                  <th class="text-right">Saldo</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="row in filteredData" :key="row.RUT">
-                  <td class="text-left">{{ row.RUT }}</td>
-                  <td class="text-left">{{ row.RAZO }}</td>
-                  <td class="text-right">{{ formatCurrency(row.SALD) }}</td>
-                </tr>
-              </tbody>
-            </q-markup-table>
+            <q-table
+              flat
+              bordered
+              :data="paginatedData"
+              :columns="detalleTitle.includes('Estado de Resultado') ? [
+                { name: 'IDX', label: 'IDX', field: 'IDX', align: 'left' },
+                { name: 'TIPO', label: 'Tipo', field: 'TIPO', align: 'left' },
+                { name: 'DCTA', label: 'Descripción', field: 'DCTA', align: 'left' },
+                {
+                  name: 'SALD',
+                  label: 'Saldo',
+                  field: 'SALD',
+                  align: 'right',
+                  format: (val) => formatCurrency(Number(val))
+                },
+                { name: 'PORC', label: 'Porcentaje', field: 'PORC', align: 'right' }
+              ] : [
+                {
+                  name: 'RUT',
+                  label: 'RUT',
+                  field: row => row.RUTP || row.RUTC || '',
+                  align: 'left'
+                },
+                {
+                  name: 'SUC',
+                  label: 'Sucursal',
+                  field: row => row.SUCP || row.SUCC || '',
+                  align: 'left'
+                },
+                { name: 'RAZO', label: 'Razón Social', field: 'RAZO', align: 'left' },
+                {
+                  name: 'SALD',
+                  label: 'Saldo',
+                  field: 'SALD',
+                  align: 'right',
+                  format: (val) => formatCurrency(Number(val))
+                }
+              ]"
+              :pagination.sync="tablePagination"
+              @request="onRequest"
+              :rows-per-page-options="[10, 15, 20, 0]"
+              :row-key="detalleTitle.includes('Estado de Resultado') ? 'IDX' : (row => row.RUTP || row.RUTC || '')"
+            />
           </div>
         </q-card-section>
       </q-card>
@@ -193,9 +220,16 @@ export default {
       chartTimeout: null,
       /** @property {number} cacheExpiration - Tiempo de expiración del caché en milisegundos */
       cacheExpiration: 1800000, // 30 minutos
-      selectedYear: currentYear,
-      selectedMonth: { label: "Enero", value: 1 },
       currentYear,
+      selectedYear: currentYear,
+      selectedMonth: (() => {
+        const months = [
+          "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+          "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+        ];
+        const currentMonth = new Date().getMonth(); // 0-based index
+        return { label: months[currentMonth], value: currentMonth + 1 };
+      })(),
       loadingChart: true,
       datos: {
         data: [],
@@ -263,11 +297,8 @@ export default {
         estado_resultado: {
           title: "Estado Resultado",
           subtitle: "Periodo al 10/2023",
-          amount: "$679,938,635",
+          amount: "$0",
           loading: false,
-          showDateMenu: false,
-          selectedDate: [],
-          filtro: "selector",
           cardClass: 'estado-card',
           icon: 'trending_up'
         },
@@ -276,18 +307,14 @@ export default {
           subtitle: "Al 04/12/24",
           amount: "$1.234.567.890",
           loading: false,
-          selectedDate: [],
-          filtro: "selector",
           cardClass: 'flujo-card',
           icon: 'account_balance'
         },
         cuentas_por_cobrar: {
           title: "Cuentas por Cobrar",
           subtitle: "Al 04/12/2024",
-          amount: "$422.237.490",
+          amount: "$0",
           loading: false,
-          selectedDate: [],
-          filtro: "selector",
           cardClass: 'cobrar-card',
           icon: 'attach_money'
         },
@@ -296,8 +323,6 @@ export default {
           subtitle: "Al 04/12/2024",
           amount: "$0",
           loading: false,
-          selectedDate: [],
-          filtro: "selector",
           cardClass: 'pagar-card',
           icon: 'money_off'
         },
@@ -319,10 +344,9 @@ export default {
       ],
 
       years: [
+        currentYear - 2,
         currentYear - 1,
         currentYear,
-        currentYear + 1,
-        currentYear + 2,
       ],
       filteredMonths: [],
 
@@ -332,39 +356,13 @@ export default {
       detalleData: [],
       loadingDetalle: false,
       filter: '',
-      
-      // Configuración de la tabla
-      tableColumns: [
-        { 
-          name: 'RUT', 
-          label: 'RUT', 
-          field: 'RUT', 
-          align: 'left',
-          sortable: true 
-        },
-        { 
-          name: 'RAZO', 
-          label: 'Razón Social', 
-          field: 'RAZO', 
-          align: 'left',
-          sortable: true 
-        },
-        { 
-          name: 'SALD', 
-          label: 'Saldo', 
-          field: 'SALD',
-          align: 'right',
-          sortable: true,
-          format: val => this.formatCurrency(val)
-        }
-      ],
       tablePagination: {
         sortBy: 'SALD',
         descending: true,
         page: 1,
         rowsPerPage: 10,
         rowsNumber: 0
-      }
+      },
     };
   },
   watch: {
@@ -379,20 +377,40 @@ export default {
     selectedMonth() {
       this.filterChart();
     },
-    selectedYear() {
-      this.filterMonths();
-    },
+    showDetailDialog(newVal) {
+      if (!newVal) {
+        // Clean up when dialog closes
+        this.detalleData = [];
+        this.filter = '';
+        this.loadingDetalle = false;
+      }
+    }
   },
   computed: {
     filteredData() {
-      if (!this.filter) {
-        return this.detalleData;
+      // If no filter, return all data
+      if (!this.filter || !this.detalleData) {
+        return this.detalleData || [];
       }
-      const searchTerm = this.filter.toLowerCase();
-      return this.detalleData.filter(item => 
-        (item.RUT || '').toLowerCase().includes(searchTerm) ||
-        (item.RAZO || '').toLowerCase().includes(searchTerm) ||
-        (item.SALD || '').toString().includes(searchTerm)
+
+      const searchTerm = this.filter.toLowerCase().trim();
+
+      // Return filtered data based on table type
+      if (this.detalleTitle.includes('Estado de Resultado')) {
+        return this.detalleData.filter(item =>
+          String(item.IDX).toLowerCase().includes(searchTerm) ||
+          String(item.TIPO).toLowerCase().includes(searchTerm) ||
+          String(item.DCTA).toLowerCase().includes(searchTerm) ||
+          String(item.SALD).toLowerCase().includes(searchTerm) ||
+          String(item.PORC).toLowerCase().includes(searchTerm)
+        );
+      }
+
+      return this.detalleData.filter(item =>
+        String(item.RUT).toLowerCase().includes(searchTerm) ||
+        String(item.SUC).toLowerCase().includes(searchTerm) ||
+        String(item.RAZO).toLowerCase().includes(searchTerm) ||
+        String(item.SALD).toLowerCase().includes(searchTerm)
       );
     },
     filteredSeries() {
@@ -412,6 +430,42 @@ export default {
         },
       ];
     },
+    paginatedData() {
+      const { page, rowsPerPage, sortBy, descending } = this.tablePagination;
+
+      // Sort data if needed
+      let sortedData = [...this.detalleData];
+      if (sortBy) {
+        const sortFn = (a, b) => {
+          let aVal = a[sortBy];
+          let bVal = b[sortBy];
+
+          // Convert to numbers if the field is SALD
+          if (sortBy === 'SALD') {
+            aVal = Number(aVal);
+            bVal = Number(bVal);
+          }
+
+          if (aVal < bVal) return descending ? 1 : -1;
+          if (aVal > bVal) return descending ? -1 : 1;
+          return 0;
+        };
+
+        sortedData.sort(sortFn);
+      }
+
+      // Return all data if rowsPerPage is 0
+      if (rowsPerPage === 0) {
+        return sortedData;
+      }
+
+      // Calculate start and end index
+      const startRow = (page - 1) * rowsPerPage;
+      const endRow = startRow + rowsPerPage;
+
+      // Return sliced data
+      return sortedData.slice(startRow, endRow);
+    },
   },
   methods: {
     /**
@@ -421,17 +475,17 @@ export default {
     irADetalle(id) {
       // Si no hay fecha seleccionada, usar la fecha actual
       const fecha = this.selectedDate || this.formatDate(new Date());
-      
+
       // Guardar el ID y la fecha en el store
       this.$store.commit('cards/setCardDetails', {
         id: id,
         date: fecha
       });
-      
+
       // Navegar al detalle usando el path correcto
       this.$router.push({
         name: 'detail',
-        query: { 
+        query: {
           id: id,
           date: fecha
         }
@@ -447,7 +501,7 @@ export default {
     checkCache(date, cardKey) {
       const cacheKey = `dashboard_${cardKey}_${date}`;
       const cached = localStorage.getItem(cacheKey);
-      
+
       if (cached) {
         const { timestamp, data } = JSON.parse(cached);
         if (Date.now() - timestamp < this.cacheExpiration) {
@@ -486,7 +540,7 @@ export default {
       }
 
       const formattedDate = this.selectedDate ? this.formatDate(this.selectedDate) : this.formatDate(new Date());
-      
+
       // Verificar caché
       const cachedData = this.checkCache(formattedDate, peticion);
       if (cachedData) {
@@ -523,13 +577,12 @@ export default {
             const datosParsed = response.data.datos;
             this.$set(this.cards[peticion], 'amount', this.formatCurrency(datosParsed.amount));
             this.$set(this.cards[peticion], 'subtitle', `Al ${formattedDate}`);
-            
+
             // Guardar en caché
             this.saveToCache(formattedDate, peticion, datosParsed);
           }
         })
         .catch((error) => {
-          console.error("Error al cargar datos de " + peticion + ":", error);
           this.$q.notify({
             type: 'negative',
             message: `Error al cargar ${this.cards[peticion].title}`,
@@ -548,17 +601,15 @@ export default {
      */
     applyDate() {
       if (this.selectedDate) {
-        console.log('Fecha seleccionada:', this.selectedDate);
         // Lista de todas las tarjetas que necesitamos actualizar
-        const cardKeys = ['estado_resultado', 'flujo_de_caja', 'cuentas_por_cobrar', 'cuentas_por_pagar'];
-        
+        const cardKeys = ['cuentas_por_pagar', 'cuentas_por_cobrar', 'estado_resultado', 'flujo_de_caja'];
+
         // Actualizar cada tarjeta
         cardKeys.forEach(cardKey => {
-          console.log('Actualizando tarjeta:', cardKey);
           this.loadCardData(cardKey);
         });
 
-        // También actualizamos el gráfico
+        // Tambien actualizamos el grafico
         this.loadChart();
       }
     },
@@ -573,11 +624,6 @@ export default {
       }
 
       this.loadingChart = true;
-      console.log('Iniciando carga del gráfico:', {
-        año: this.selectedYear,
-        mes: this.selectedMonth,
-        endpoint: Const.backend + "dashboard.php"
-      });
 
       const params = {
         Distribuidor: "001",
@@ -586,29 +632,19 @@ export default {
         FilterMonths: this.selectedMonth?.value || null,
       };
 
-      console.log('Parámetros de la petición:', params);
-
       this.$axios
         .post(Const.backend + "dashboard.php", params)
         .then((response) => {
-          console.log('Estructura completa de la respuesta:', {
-            data: response.data,
-            datos: response.data?.datos,
-            tipo: response.data?.datos ? typeof response.data.datos : 'undefined',
-            esArray: Array.isArray(response.data?.datos),
-            keys: response.data?.datos ? Object.keys(response.data.datos) : []
-          });
-          
+
           if (!response.data?.datos) {
             throw new Error('No hay datos en la respuesta');
           }
 
           const datos = response.data.datos;
-          
+
           // Verificar si los datos ya vienen en formato ApexCharts
           if (datos.categories && datos.series) {
-            console.log('Datos en formato ApexCharts detectados:', datos);
-            
+
             // Actualizar las categorías del eje X
             this.chartOptions = {
               ...this.chartOptions,
@@ -622,20 +658,11 @@ export default {
               ...serie,
               data: serie.data.map(value => parseFloat(value) || 0)
             }));
-
-            console.log('Series actualizadas:', this.series);
           } else {
             throw new Error('Formato de datos no válido');
           }
         })
         .catch((error) => {
-          console.error("Error detallado al cargar el gráfico:", {
-            mensaje: error.message,
-            respuesta: error.response?.data,
-            status: error.response?.status,
-            error: error
-          });
-          
           this.$q.notify({
             type: 'negative',
             message: `Error al cargar el gráfico: ${error.message}`,
@@ -686,7 +713,8 @@ export default {
       const formatter = new Intl.NumberFormat("es-CL", {
         style: "currency",
         currency: "CLP",
-        minimumFractionDigits: 0
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
       });
       return formatter.format(amount).replace("CLP", "").trim();
     },
@@ -714,23 +742,39 @@ export default {
 
     /**
      * Muestra el detalle de una tarjeta en un popup
-     * @param {string} id - Identificador de la tarjeta
+     * @param {string} tipo - Identificador de la tarjeta
      */
     async mostrarDetalle(tipo) {
       try {
+        console.log('Tipo:', tipo);
         this.loadingDetalle = true;
         this.showDetailDialog = true;
         this.detalleData = [];
-        
+
+        // Reset pagination
+        this.tablePagination = {
+          page: 1,
+          rowsPerPage: 10,
+          sortBy: 'SALD',
+          descending: true,
+          rowsNumber: 0
+        };
+
         // Establecer el título según el tipo de detalle
-        this.detalleTitle = tipo === 'cuentas_por_cobrar' ? 'Detalle Cuentas por Cobrar' : 'Detalle Cuentas por Pagar';
-        
+        this.detalleTitle = tipo === 'cuentas_por_cobrar' ? 'Detalle Cuentas por Cobrar'
+          : tipo === 'flujo_de_caja' ? 'Detalle Flujo de Caja'
+          : tipo === 'estado_resultado' ? 'Detalle Estado de Resultado'
+          : 'Detalle Cuentas por Pagar';
+
         // Construir el endpoint
-        const endpoint = tipo === 'cuentas_por_cobrar' ? 'cuentas_por_cobrar_detalle' : 'cuentas_por_pagar_detalle';
-        
+        const endpoint = tipo === 'cuentas_por_cobrar' ? 'cuentas_por_cobrar_detalle'
+          : tipo === 'flujo_de_caja' ? 'flujo_de_caja_detalle'
+          : tipo === 'estado_resultado' ? 'estado_resultado_detalle'
+          : 'cuentas_por_pagar_detalle';
+
         // Obtener la fecha formateada
         const formattedDate = this.selectedDate ? this.formatDate(this.selectedDate) : this.formatDate(new Date());
-        
+
         // Realizar la petición
         const response = await this.$axios.post(
           Const.backend + "dashboard.php",
@@ -741,48 +785,24 @@ export default {
           }
         );
 
-        console.log('Respuesta completa:', response.data);
-        console.log('Estructura de datos:', {
-          tieneData: !!response.data,
-          tieneDatos: !!response.data?.datos,
-          esArray: Array.isArray(response.data?.datos),
-          longitud: response.data?.datos?.length,
-          primerElemento: response.data?.datos?.[0]
-        });
-
         // Verificar y procesar la respuesta
         if (response.data && response.data.datos && Array.isArray(response.data.datos)) {
-          // Asegurarse que cada elemento tenga las propiedades necesarias y los tipos correctos
-          this.detalleData = response.data.datos.map(item => {
-            const mappedItem = {
-              RUT: item.RUTC || item.RUTP || '', // Intentamos obtener RUTC o RUTP
-              RAZO: item.RAZO || '',
-              SALD: parseFloat(item.SALD || 0)
-            };
-            console.log('Item mapeado:', mappedItem);
-            return mappedItem;
-          });
-          
-          console.log('Datos procesados:', this.detalleData);
-          
-          // Actualizar el número total de filas para la paginación
-          this.tablePagination = {
-            ...this.tablePagination,
-            rowsNumber: this.detalleData.length
-          };
+          this.detalleData = response.data.datos;
+          this.tablePagination.rowsNumber = this.detalleData.length;
 
-          // Forzar la actualización de la tabla
-          this.$nextTick(() => {
-            if (this.detalleData.length > 0) {
-              console.log('Actualizando tabla con', this.detalleData.length, 'registros');
-            }
+          // Trigger initial sort
+          this.onRequest({
+            pagination: this.tablePagination
           });
+
+          console.log('Datos procesados:', this.detalleData);
         } else {
-          console.error('La respuesta no tiene el formato esperado:', response.data);
+          console.warn('No se encontraron datos en la respuesta:', response);
           this.detalleData = [];
+          this.tablePagination.rowsNumber = 0;
         }
       } catch (error) {
-        console.error('Error al cargar los detalles:', error);
+        console.error('Error:', error);
         this.$q.notify({
           color: 'negative',
           position: 'top',
@@ -790,6 +810,7 @@ export default {
           icon: 'warning'
         });
         this.detalleData = [];
+        this.tablePagination.rowsNumber = 0;
       } finally {
         this.loadingDetalle = false;
       }
@@ -805,31 +826,56 @@ export default {
 
       try {
         const BOM = "\uFEFF";
-        const headers = ['RUT;Razón Social;Saldo\n'];
-        const rows = this.detalleData.map(item => {
-          const rut = item.RUT || '';
-          const razon = item.RAZO || '';
-          const saldo = item.SALD || 0;
-          return `${rut};${razon};${saldo}\n`;
-        });
+        let headers, rows;
+
+        // Handle different table types
+        if (this.detalleTitle.includes('Estado de Resultado')) {
+          headers = ['IDX;Tipo;Descripción;Saldo;Porcentaje\n'];
+          rows = this.detalleData.map(item => {
+            return `${item.IDX};${item.TIPO};${item.DCTA};${this.formatCurrency(item.SALD)};${item.PORC}\n`;
+          });
+        } else {
+          // Handle both Cuentas por Cobrar and Cuentas por Pagar
+          headers = ['RUT;Sucursal;Razón Social;Saldo\n'];
+          rows = this.detalleData.map(item => {
+            const rut = item.RUTP || item.RUTC || '';
+            const suc = item.SUCP || item.SUCC || '';
+            const razon = item.RAZO || '';
+            const saldo = this.formatCurrency(item.SALD);
+            return `${rut};${suc};${razon};${saldo}\n`;
+          });
+        }
+
         const csvContent = BOM + headers.concat(rows).join('');
-        
+
+        // Create filename based on table type
+        const filename = this.detalleTitle.includes('Estado de Resultado') ? 'estado_resultado.csv'
+          : this.detalleTitle.includes('Cuentas por Cobrar') ? 'cuentas_por_cobrar.csv'
+          : 'cuentas_por_pagar.csv';
+
         // Crear el blob y el link de descarga
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
-        
+
         // Crear URL del blob
         const url = window.URL.createObjectURL(blob);
         link.setAttribute('href', url);
-        link.setAttribute('download', 'detalle_cuentas.csv');
-        
+        link.setAttribute('download', filename);
+
         // Agregar link al documento, hacer click y remover
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        
+
         // Liberar el URL
         window.URL.revokeObjectURL(url);
+
+        // Show success notification
+        this.$q.notify({
+          color: 'positive',
+          message: 'Archivo exportado exitosamente',
+          icon: 'check'
+        });
       } catch (error) {
         console.error('Error al exportar:', error);
         this.$q.notify({
@@ -839,6 +885,19 @@ export default {
         });
       }
     },
+    onRequest(props) {
+      const { page, rowsPerPage, sortBy, descending } = props.pagination;
+
+      // Update pagination state
+      this.tablePagination = {
+        ...this.tablePagination,
+        page,
+        rowsPerPage,
+        sortBy,
+        descending,
+        rowsNumber: this.detalleData.length
+      };
+    },
   },
   /**
    * Hook del ciclo de vida: Mounted
@@ -847,11 +906,11 @@ export default {
   mounted() {
     // Limpiar caché al montar el componente
     this.clearDashboardCache();
-    
+
     // Cargar datos iniciales
-    const cardKeys = ['cuentas_por_pagar', 'cuentas_por_cobrar', 'flujo_de_caja'];
+    const cardKeys = ['cuentas_por_pagar', 'cuentas_por_cobrar', 'estado_resultado', 'flujo_de_caja'];
     cardKeys.forEach(key => this.loadCardData(key));
-    
+
     // Cargar el gráfico con los valores iniciales
     this.loadChart();
   },
