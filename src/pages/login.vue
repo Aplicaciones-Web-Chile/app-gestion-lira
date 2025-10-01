@@ -1,7 +1,7 @@
-<!-- 
+<!--
   login.vue
   Página de inicio de sesión
-  
+
   Este componente maneja la autenticación de usuarios en la aplicación.
   Características principales:
   - Formulario de login con validación
