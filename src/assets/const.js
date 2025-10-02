@@ -1,6 +1,6 @@
 export default {
 	//backend 		: 'https://appediatra.aplicacionesweb.dev/backend-dashboard-lira/'
-	backend: 'https://appgestion.distribuidoralira.cl/backend/'
+	backend: 'https://backend-lira-app-gestion.aplicacionesweb.cl/'
 	, ErrorHandler: vue => {
 		vue.$q.notify({
 			message: 'Error al intentar conectar con el servidor'
